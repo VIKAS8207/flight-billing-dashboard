@@ -161,13 +161,40 @@ export default function DashboardLayout() {
               </div>
               
               <nav className="flex flex-col gap-1.5">
-                {/* CHARGES MASTER - Converted to a standard link */}
+                {/* CHARGES MASTER */}
                 <SidebarLink 
                   to="/charges-master" 
                   label="Charges Master" 
                   onClick={closeDropdowns}
                   active={location.pathname === '/charges-master'}
                   icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/></svg>} 
+                />
+
+                {/* FLIGHT MASTER */}
+                <SidebarLink 
+                  to="/flight-master" 
+                  label="Flight Master" 
+                  onClick={closeDropdowns}
+                  active={location.pathname === '/flight-master'}
+                  icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>} 
+                />
+
+                {/* AIRLINE MASTER */}
+                <SidebarLink 
+                  to="/airline-master" 
+                  label="Airline Master" 
+                  onClick={closeDropdowns}
+                  active={location.pathname === '/airline-master'}
+                  icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>} 
+                />
+
+                {/* BUDGET MASTER */}
+                <SidebarLink 
+                  to="/budget-master" 
+                  label="Budget Master" 
+                  onClick={closeDropdowns}
+                  active={location.pathname === '/budget-master'}
+                  icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" /></svg>} 
                 />
               </nav>
 

@@ -1,37 +1,40 @@
 import React, { useState } from 'react';
-import { Search, Filter, Send, FileDown, CheckCircle, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, Send, FileDown, ChevronDown, ChevronLeft, ChevronRight, Plane } from 'lucide-react';
 
 // Utility to format currency
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
 };
 
-// Expanded Mock Data to demonstrate page-level scrolling
+// Expanded Mock Data with 'type' added and 'Sent' replaced with 'Awaiting Payment'
 const initialInvoices = [
-  { id: 'INV-2026-015', airline: 'Air India', flightNo: 'AI-101', date: '08 May 2026', amount: 145000, status: 'Saved' },
-  { id: 'INV-2026-014', airline: 'IndiGo Airlines', flightNo: '6E-555', date: '08 May 2026', amount: 85000, status: 'Sent' },
-  { id: 'INV-2026-013', airline: 'Private Charter', flightNo: 'VT-ZZZ', date: '07 May 2026', amount: 22000, status: 'Paid' },
-  { id: 'INV-2026-012', airline: 'Alliance Air Aviation', flightNo: '9I-404', date: '07 May 2026', amount: 67000, status: 'Saved' },
-  { id: 'INV-2026-011', airline: 'IndiGo Airlines', flightNo: '6E-888', date: '06 May 2026', amount: 110000, status: 'Sent' },
-  { id: 'INV-2026-010', airline: 'Private Charter', flightNo: 'VT-LMN', date: '06 May 2026', amount: 35000, status: 'Paid' },
-  { id: 'INV-2026-009', airline: 'Air India', flightNo: 'AI-211', date: '06 May 2026', amount: 95000, status: 'Saved' },
-  { id: 'INV-2026-008', airline: 'Private Charter', flightNo: 'VT-ABC', date: '05 May 2026', amount: 41000, status: 'Saved' },
-  { id: 'INV-2026-007', airline: 'IndiGo Airlines', flightNo: '6E-444', date: '05 May 2026', amount: 105000, status: 'Sent' },
-  { id: 'INV-2026-006', airline: 'Alliance Air Aviation', flightNo: '9I-305', date: '04 May 2026', amount: 52000, status: 'Paid' },
-  { id: 'INV-2026-005', airline: 'Alliance Air Aviation', flightNo: '9I-201', date: '04 May 2026', amount: 45000, status: 'Saved' },
-  { id: 'INV-2026-004', airline: 'IndiGo Airlines', flightNo: '6E-782', date: '03 May 2026', amount: 125000, status: 'Sent' },
-  { id: 'INV-2026-003', airline: 'Air India', flightNo: 'AI-404', date: '01 May 2026', amount: 89000, status: 'Paid' },
-  { id: 'INV-2026-002', airline: 'Private Charter', flightNo: 'VT-XYZ', date: '28 Apr 2026', amount: 32000, status: 'Sent' },
-  { id: 'INV-2026-001', airline: 'IndiGo Airlines', flightNo: '6E-112', date: '25 Apr 2026', amount: 110000, status: 'Paid' },
+  { id: 'INV-2026-015', airline: 'Air India', type: 'Public', flightNo: 'AI-101', date: '08 May 2026', amount: 145000, status: 'Saved' },
+  { id: 'INV-2026-014', airline: 'IndiGo Airlines', type: 'Public', flightNo: '6E-555', date: '08 May 2026', amount: 85000, status: 'Awaiting Payment' },
+  { id: 'INV-2026-013', airline: 'Private Charter', type: 'Private', flightNo: 'VT-ZZZ', date: '07 May 2026', amount: 22000, status: 'Paid' },
+  { id: 'INV-2026-012', airline: 'Alliance Air Aviation', type: 'Public', flightNo: '9I-404', date: '07 May 2026', amount: 67000, status: 'Saved' },
+  { id: 'INV-2026-011', airline: 'IndiGo Airlines', type: 'Public', flightNo: '6E-888', date: '06 May 2026', amount: 110000, status: 'Awaiting Payment' },
+  { id: 'INV-2026-010', airline: 'Private Charter', type: 'Private', flightNo: 'VT-LMN', date: '06 May 2026', amount: 35000, status: 'Paid' },
+  { id: 'INV-2026-009', airline: 'Air India', type: 'Public', flightNo: 'AI-211', date: '06 May 2026', amount: 95000, status: 'Saved' },
+  { id: 'INV-2026-008', airline: 'Private Charter', type: 'Private', flightNo: 'VT-ABC', date: '05 May 2026', amount: 41000, status: 'Saved' },
+  { id: 'INV-2026-007', airline: 'IndiGo Airlines', type: 'Public', flightNo: '6E-444', date: '05 May 2026', amount: 105000, status: 'Awaiting Payment' },
+  { id: 'INV-2026-006', airline: 'Alliance Air Aviation', type: 'Public', flightNo: '9I-305', date: '04 May 2026', amount: 52000, status: 'Paid' },
+  { id: 'INV-2026-005', airline: 'Alliance Air Aviation', type: 'Public', flightNo: '9I-201', date: '04 May 2026', amount: 45000, status: 'Saved' },
+  { id: 'INV-2026-004', airline: 'IndiGo Airlines', type: 'Public', flightNo: '6E-782', date: '03 May 2026', amount: 125000, status: 'Awaiting Payment' },
+  { id: 'INV-2026-003', airline: 'Air India', type: 'Public', flightNo: 'AI-404', date: '01 May 2026', amount: 89000, status: 'Paid' },
+  { id: 'INV-2026-002', airline: 'Private Charter', type: 'Private', flightNo: 'VT-XYZ', date: '28 Apr 2026', amount: 32000, status: 'Awaiting Payment' },
+  { id: 'INV-2026-001', airline: 'IndiGo Airlines', type: 'Public', flightNo: '6E-112', date: '25 Apr 2026', amount: 110000, status: 'Paid' },
 ];
 
 export default function Payment() {
   const [invoices, setInvoices] = useState(initialInvoices);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Custom Dropdown State
+  // Custom Dropdown States
   const [filterStatus, setFilterStatus] = useState('All');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  const [filterType, setFilterType] = useState('All');
+  const [isTypeFilterOpen, setIsTypeFilterOpen] = useState(false);
 
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
@@ -43,7 +46,8 @@ export default function Payment() {
                           inv.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           inv.flightNo.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'All' || inv.status === filterStatus;
-    return matchesSearch && matchesStatus;
+    const matchesType = filterType === 'All' || inv.type === filterType;
+    return matchesSearch && matchesStatus && matchesType;
   });
 
   // Pagination Logic
@@ -56,18 +60,20 @@ export default function Payment() {
 
   // Action Handlers
   const handleSend = (id) => {
-    setInvoices(invoices.map(inv => inv.id === id ? { ...inv, status: 'Sent' } : inv));
+    setInvoices(invoices.map(inv => inv.id === id ? { ...inv, status: 'Awaiting Payment' } : inv));
     alert(`Invoice ${id} has been sent to the airline!`);
   };
 
-  const handleMarkPaid = (id) => {
-    setInvoices(invoices.map(inv => inv.id === id ? { ...inv, status: 'Paid' } : inv));
-  };
-
-  const handleSelectFilter = (status) => {
+  const handleSelectStatus = (status) => {
     setFilterStatus(status);
     setIsFilterOpen(false);
     setCurrentPage(1); 
+  };
+
+  const handleSelectType = (type) => {
+    setFilterType(type);
+    setIsTypeFilterOpen(false);
+    setCurrentPage(1);
   };
 
   // Badge Styling
@@ -75,8 +81,8 @@ export default function Payment() {
     switch (status) {
       case 'Saved':
         return <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 rounded-full">Saved (Draft)</span>;
-      case 'Sent':
-        return <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 border border-amber-200/50 rounded-full">Sent (Unpaid)</span>;
+      case 'Awaiting Payment':
+        return <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 border border-amber-200/50 rounded-full">Awaiting Payment</span>;
       case 'Paid':
         return <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 border border-emerald-200/50 rounded-full">Paid</span>;
       default:
@@ -113,32 +119,65 @@ export default function Payment() {
             />
           </div>
 
-          <div className="relative">
-            <button 
-              onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="flex items-center gap-2 h-11 px-5 rounded-2xl bg-gradient-to-r from-[#007BFF] to-[#409cff] text-white font-bold shadow-md shadow-[#007BFF]/20 hover:shadow-lg hover:scale-[1.02] transition-all"
-            >
-              <Filter size={16} className="opacity-90" />
-              <span className="text-[13px] tracking-wide">
-                {filterStatus === 'All' ? 'All Statuses' : filterStatus}
-              </span>
-              <ChevronDown size={16} className={`ml-1 opacity-90 transition-transform duration-300 ${isFilterOpen ? 'rotate-180' : ''}`} />
-            </button>
+          <div className="flex items-center gap-3">
+            {/* Flight Type Filter */}
+            <div className="relative">
+              <button 
+                onClick={() => { setIsTypeFilterOpen(!isTypeFilterOpen); setIsFilterOpen(false); }}
+                className="flex items-center gap-2 h-11 px-5 rounded-2xl bg-gradient-to-r from-[#007BFF] to-[#409cff] text-white font-bold shadow-md shadow-[#007BFF]/20 hover:shadow-lg hover:scale-[1.02] transition-all"
+              >
+                <Plane size={16} className="opacity-90" />
+                <span className="text-[13px] tracking-wide whitespace-nowrap">
+                  {filterType === 'All' ? 'All Flights' : `${filterType} Flights`}
+                </span>
+                <ChevronDown size={16} className={`ml-1 opacity-90 transition-transform duration-300 ${isTypeFilterOpen ? 'rotate-180' : ''}`} />
+              </button>
 
-            <div className={`absolute right-0 top-full mt-2 w-48 rounded-2xl bg-white shadow-xl shadow-[#007BFF]/10 py-2 border border-slate-100 overflow-hidden transform origin-top-right transition-all duration-200 z-50 ${isFilterOpen ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}`}>
-              {['All', 'Saved', 'Sent', 'Paid'].map((opt) => (
-                <button
-                  key={opt}
-                  onClick={() => handleSelectFilter(opt)}
-                  className={`w-full text-left px-5 py-2.5 text-[13px] font-bold transition-colors ${
-                    filterStatus === opt 
-                      ? 'bg-[#007BFF]/10 text-[#007BFF]' 
-                      : 'text-slate-600 hover:bg-[#007BFF]/5 hover:text-[#007BFF]'
-                  }`}
-                >
-                  {opt === 'All' ? 'View All' : opt}
-                </button>
-              ))}
+              <div className={`absolute right-0 top-full mt-2 w-48 rounded-2xl bg-white shadow-xl shadow-[#007BFF]/10 py-2 border border-slate-100 overflow-hidden transform origin-top-right transition-all duration-200 z-50 ${isTypeFilterOpen ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}`}>
+                {['All', 'Public', 'Private'].map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => handleSelectType(opt)}
+                    className={`w-full text-left px-5 py-2.5 text-[13px] font-bold transition-colors ${
+                      filterType === opt 
+                        ? 'bg-[#007BFF]/10 text-[#007BFF]' 
+                        : 'text-slate-600 hover:bg-[#007BFF]/5 hover:text-[#007BFF]'
+                    }`}
+                  >
+                    {opt === 'All' ? 'View All Flights' : `${opt} Flights`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Status Filter */}
+            <div className="relative">
+              <button 
+                onClick={() => { setIsFilterOpen(!isFilterOpen); setIsTypeFilterOpen(false); }}
+                className="flex items-center gap-2 h-11 px-5 rounded-2xl bg-gradient-to-r from-[#007BFF] to-[#409cff] text-white font-bold shadow-md shadow-[#007BFF]/20 hover:shadow-lg hover:scale-[1.02] transition-all"
+              >
+                <Filter size={16} className="opacity-90" />
+                <span className="text-[13px] tracking-wide whitespace-nowrap">
+                  {filterStatus === 'All' ? 'All Statuses' : filterStatus}
+                </span>
+                <ChevronDown size={16} className={`ml-1 opacity-90 transition-transform duration-300 ${isFilterOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              <div className={`absolute right-0 top-full mt-2 w-48 rounded-2xl bg-white shadow-xl shadow-[#007BFF]/10 py-2 border border-slate-100 overflow-hidden transform origin-top-right transition-all duration-200 z-50 ${isFilterOpen ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}`}>
+                {['All', 'Saved', 'Awaiting Payment', 'Paid'].map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => handleSelectStatus(opt)}
+                    className={`w-full text-left px-5 py-2.5 text-[13px] font-bold transition-colors ${
+                      filterStatus === opt 
+                        ? 'bg-[#007BFF]/10 text-[#007BFF]' 
+                        : 'text-slate-600 hover:bg-[#007BFF]/5 hover:text-[#007BFF]'
+                    }`}
+                  >
+                    {opt === 'All' ? 'View All' : opt}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -174,7 +213,10 @@ export default function Payment() {
                     </td>
                     <td className="p-5 font-bold text-slate-800">{inv.id}</td>
                     <td className="p-5">
-                      <div className="font-bold text-slate-800">{inv.airline}</div>
+                      <div className="font-bold text-slate-800 flex items-center gap-2">
+                        {inv.airline}
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-sm bg-slate-100 text-slate-500 uppercase tracking-wider">{inv.type}</span>
+                      </div>
                       <div className="text-xs text-slate-500 mt-0.5">Flight: {inv.flightNo}</div>
                     </td>
                     <td className="p-5 font-medium text-slate-600">{inv.date}</td>
@@ -183,7 +225,6 @@ export default function Payment() {
                       {getStatusBadge(inv.status)}
                     </td>
                     <td className="p-5 pr-6">
-                      {/* Changed to justify-end so everything groups tightly on the right */}
                       <div className="flex items-center justify-end gap-3 w-full min-w-[140px]">
                         <div>
                           {inv.status === 'Saved' && (
@@ -194,13 +235,10 @@ export default function Payment() {
                               <Send size={14} /> Send
                             </button>
                           )}
-                          {inv.status === 'Sent' && (
-                            <button 
-                              onClick={() => handleMarkPaid(inv.id)}
-                              className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-colors shadow-sm shadow-emerald-500/20 text-xs font-bold"
-                            >
-                              <CheckCircle size={14} /> Mark Paid
-                            </button>
+                          {inv.status === 'Awaiting Payment' && (
+                            <span className="text-[11px] font-medium text-amber-500 italic px-1">
+                              Awaiting Payment...
+                            </span>
                           )}
                           {inv.status === 'Paid' && (
                             <span className="text-[11px] font-medium text-slate-400 italic px-1">

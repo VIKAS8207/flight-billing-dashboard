@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronDown, Plus, Calendar, Clock } from 'lucide-react';
 
 // Utility to format numbers to Indian Rupee standard (e.g., 1,00,000)
 const formatCurrency = (amount) => {
@@ -21,13 +23,23 @@ const numberToWords = (num) => {
 };
 
 export default function PublicFlights() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('parking');
   
+  // Custom Dropdown State
+  const [isAirlineOpen, setIsAirlineOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
   // Form States
   const [airline, setAirline] = useState('');
   const [flightName, setFlightName] = useState('');
+  
+  // Separated Date and Time states for better UI
   const [arrivalDate, setArrivalDate] = useState('');
+  const [arrivalTime, setArrivalTime] = useState('');
   const [departureDate, setDepartureDate] = useState('');
+  const [departureTime, setDepartureTime] = useState('');
+  
   const [passengers, setPassengers] = useState('');
 
   // Signature Mock State 
@@ -36,14 +48,34 @@ export default function PublicFlights() {
   // Invoice Data State
   const [invoiceData, setInvoiceData] = useState(null);
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsAirlineOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const airlineOptions = [
+    'M/s Alliance Air Aviation Limited',
+    'M/s IndiGo Airlines',
+    'M/s Air India',
+    'M/s Vistara',
+    'M/s SpiceJet'
+  ];
+
   const handleGenerate = () => {
     if (!airline || !flightName) return alert('Please select Airline and Flight.');
 
     if (activeTab === 'parking') {
-      if (!arrivalDate || !departureDate) return alert('Please enter both Arrival and Departure dates.');
+      if (!arrivalDate || !arrivalTime || !departureDate || !departureTime) 
+        return alert('Please enter complete Arrival and Departure dates and times.');
 
-      const arrival = new Date(arrivalDate);
-      const departure = new Date(departureDate);
+      const arrival = new Date(`${arrivalDate}T${arrivalTime}`);
+      const departure = new Date(`${departureDate}T${departureTime}`);
       
       const diffMs = departure - arrival;
       if (diffMs < 0) return alert('Departure cannot be before Arrival.');
@@ -56,20 +88,26 @@ export default function PublicFlights() {
       
       const cgst = amount * 0.09;
       const sgst = amount * 0.09;
-      const total = amount + cgst + sgst;
+      const igst = amount * 0.18; // Added 18% IGST
+      const total = amount + cgst + sgst + igst;
+
+      const formatDateTime = (d) => {
+        return d.toLocaleDateString('en-IN') + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      };
 
       setInvoiceData({
         type: 'Parking',
         airline,
         flightName,
-        arrivalDate: arrival.toLocaleDateString('en-IN'),
-        departureDate: departure.toLocaleDateString('en-IN'),
+        arrivalStr: formatDateTime(arrival),
+        departureStr: formatDateTime(departure),
         totalHours,
         billableHours,
         rate: hourlyRate,
         amount,
         cgst,
         sgst,
+        igst,
         total,
         invoiceDate: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
       });
@@ -86,47 +124,47 @@ export default function PublicFlights() {
       
       const cgst = amount * 0.09;
       const sgst = amount * 0.09;
-      const total = amount + cgst + sgst;
+      const igst = amount * 0.18; // Added 18% IGST
+      const total = amount + cgst + sgst + igst;
 
       setInvoiceData({
         type: 'UDF',
         airline,
         flightName,
-        arrivalDate: arrival.toLocaleDateString('en-IN'),
+        arrivalStr: arrival.toLocaleDateString('en-IN'),
         passengerCount,
         rate: passengerRate,
         amount,
         cgst,
         sgst,
+        igst,
         total,
         invoiceDate: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
       });
     }
   };
 
-  // Resets the entire form for a new entry
   const resetForm = () => {
     setAirline('');
     setFlightName('');
     setArrivalDate('');
+    setArrivalTime('');
     setDepartureDate('');
+    setDepartureTime('');
     setPassengers('');
     setInvoiceData(null);
   };
 
-  // Action Handlers
   const handleBack = () => {
-    setInvoiceData(null); // Keeps form data intact
+    setInvoiceData(null); 
   };
 
   const handleSave = () => {
-    console.log("Saving data:", invoiceData);
     alert("Invoice saved successfully!");
     resetForm();
   };
 
   const handleSaveAndSend = () => {
-    console.log("Saving and Sending data:", invoiceData);
     alert("Invoice saved and sent successfully!");
     resetForm();
   };
@@ -139,40 +177,39 @@ export default function PublicFlights() {
         
         {/* Styled Banner */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#1E40AF] to-[#3B82F6] p-8 text-white shadow-lg flex flex-col justify-center min-h-[140px]">
-  
-  {/* NEW: Faded Image Background on the Right */}
-  <div 
-    className="absolute inset-y-0 right-0 w-2/3 md:w-1/2 pointer-events-none z-0"
-    style={{ 
-      maskImage: 'linear-gradient(to right, transparent, black 60%)', 
-      WebkitMaskImage: '-webkit-linear-gradient(left, transparent, black 60%)' 
-    }}
-  >
-    <img 
-      src="/image/plane.png" // e.g., a commercial airliner or terminal image
-      alt="Decorative Background" 
-      className="h-full w-full object-cover object-right opacity-50 mix-blend-overlay"
-    />
-  </div>
+          <div 
+            className="absolute inset-y-0 right-0 w-2/3 md:w-1/2 pointer-events-none z-0"
+            style={{ 
+              maskImage: 'linear-gradient(to right, transparent, black 60%)', 
+              WebkitMaskImage: '-webkit-linear-gradient(left, transparent, black 60%)' 
+            }}
+          >
+            <img 
+              src="/image/plane.png" 
+              alt="Decorative Background" 
+              className="h-full w-full object-cover object-right opacity-50 mix-blend-overlay"
+              onError={(e) => e.target.style.display = 'none'}
+            />
+          </div>
 
-  <div className="relative z-10 flex flex-col items-start">
-    <h2 className="text-3xl font-bold tracking-tight leading-none">Public Invoices</h2>
-    <div className="mt-3 flex items-center gap-4 text-sm font-medium text-white/90">
-      <span className="flex items-center gap-1.5">
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> 
-        Commercial Airlines
-      </span>
-      <span className="flex items-center gap-1.5">
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg> 
-        Auto-Calculate
-      </span>
-    </div>
-  </div>
+          <div className="relative z-10 flex flex-col items-start">
+            <h2 className="text-3xl font-bold tracking-tight leading-none">Public Invoices</h2>
+            <div className="mt-3 flex items-center gap-4 text-sm font-medium text-white/90">
+              <span className="flex items-center gap-1.5">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> 
+                Commercial Airlines
+              </span>
+              <span className="flex items-center gap-1.5">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg> 
+                Auto-Calculate
+              </span>
+            </div>
+          </div>
 
-  {/* Abstract background elements */}
-  <div className="absolute -right-4 -top-10 h-32 w-32 rounded-full bg-white/10 blur-2xl z-0"></div>
-  <div className="absolute -bottom-10 right-10 h-24 w-24 rounded-full bg-white/10 blur-xl z-0"></div>
-</div>
+          {/* Abstract background elements */}
+          <div className="absolute -right-4 -top-10 h-32 w-32 rounded-full bg-white/10 blur-2xl z-0"></div>
+          <div className="absolute -bottom-10 right-10 h-24 w-24 rounded-full bg-white/10 blur-xl z-0"></div>
+        </div>
 
         {/* Input Form Card */}
         <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-xl mb-4">
@@ -193,20 +230,54 @@ export default function PublicFlights() {
 
           <form className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              
+              {/* CUSTOM AIRLINE DROPDOWN */}
+              <div className="relative" ref={dropdownRef}>
                 <label className="mb-1.5 block text-xs font-bold text-slate-700">Airlines Company <span className="text-red-500">*</span></label>
-                <div className="relative">
-                  <select value={airline} onChange={(e) => setAirline(e.target.value)} className="w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 transition-colors focus:border-[#3B82F6] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3B82F6]">
-                    <option value="" disabled>Select Airline...</option>
-                    <option value="M/s Alliance Air Aviation Limited">Alliance Air Aviation</option>
-                    <option value="M/s IndiGo Airlines">IndiGo Airlines</option>
-                    <option value="M/s Air India">Air India</option>
-                  </select>
-                  <div className="pointer-events-none absolute right-3 top-3.5 text-slate-400">
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
-                  </div>
+                <div 
+                  onClick={() => setIsAirlineOpen(!isAirlineOpen)}
+                  className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 transition-colors hover:bg-white focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                >
+                  <span className={airline ? "text-slate-900" : "text-slate-400"}>
+                    {airline || 'Select Airline...'}
+                  </span>
+                  <ChevronDown size={16} className={`text-slate-400 transition-transform ${isAirlineOpen ? 'rotate-180' : ''}`} />
                 </div>
+
+                {isAirlineOpen && (
+                  <div className="absolute top-full left-0 z-50 mt-2 w-full rounded-[10px] bg-white shadow-xl py-2 flex flex-col border-none overflow-hidden">
+                    <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                      {airlineOptions.map((opt, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setAirline(opt);
+                            setIsAirlineOpen(false);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Add Flight Link inside Dropdown */}
+                    <div className="border-t border-slate-100 mt-1 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAirlineOpen(false);
+                          navigate('/flight-master');
+                        }}
+                        className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-bold text-[#3B82F6] hover:bg-blue-50 transition-colors"
+                      >
+                        <Plus size={16} /> Add Flight
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
+
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-slate-700">Flight Name / Number <span className="text-red-500">*</span></label>
                 <input value={flightName} onChange={(e) => setFlightName(e.target.value)} type="text" placeholder="e.g. 6E-201" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 transition-colors focus:border-[#3B82F6] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3B82F6]" />
@@ -215,21 +286,55 @@ export default function PublicFlights() {
 
             {/* CONDITIONAL FIELDS BASED ON TAB */}
             {activeTab === 'parking' ? (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
+                {/* Arrival Block */}
                 <div>
-                  <label className="mb-1.5 block text-xs font-bold text-slate-700">Arrival Date & Time <span className="text-red-500">*</span></label>
-                  <input value={arrivalDate} onChange={(e) => setArrivalDate(e.target.value)} type="datetime-local" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 transition-colors focus:border-[#3B82F6] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3B82F6]" />
+                  <label className="mb-1.5 block text-xs font-bold text-slate-700">Arrival Details <span className="text-red-500">*</span></label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                        <Calendar size={14} />
+                      </div>
+                      <input value={arrivalDate} onChange={(e) => setArrivalDate(e.target.value)} type="date" className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 py-2.5 text-sm text-slate-800 transition-colors focus:border-[#3B82F6] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3B82F6]" />
+                    </div>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                        <Clock size={14} />
+                      </div>
+                      <input value={arrivalTime} onChange={(e) => setArrivalTime(e.target.value)} type="time" className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 py-2.5 text-sm text-slate-800 transition-colors focus:border-[#3B82F6] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3B82F6]" />
+                    </div>
+                  </div>
                 </div>
+
+                {/* Departure Block */}
                 <div>
-                  <label className="mb-1.5 block text-xs font-bold text-slate-700">Departure Date & Time <span className="text-red-500">*</span></label>
-                  <input value={departureDate} onChange={(e) => setDepartureDate(e.target.value)} type="datetime-local" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 transition-colors focus:border-[#3B82F6] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3B82F6]" />
+                  <label className="mb-1.5 block text-xs font-bold text-slate-700">Departure Details <span className="text-red-500">*</span></label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                        <Calendar size={14} />
+                      </div>
+                      <input value={departureDate} onChange={(e) => setDepartureDate(e.target.value)} type="date" className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 py-2.5 text-sm text-slate-800 transition-colors focus:border-[#3B82F6] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3B82F6]" />
+                    </div>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                        <Clock size={14} />
+                      </div>
+                      <input value={departureTime} onChange={(e) => setDepartureTime(e.target.value)} type="time" className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 py-2.5 text-sm text-slate-800 transition-colors focus:border-[#3B82F6] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3B82F6]" />
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-bold text-slate-700">Arrival Date <span className="text-red-500">*</span></label>
-                  <input value={arrivalDate} onChange={(e) => setArrivalDate(e.target.value)} type="date" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 transition-colors focus:border-[#3B82F6] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3B82F6]" />
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                      <Calendar size={14} />
+                    </div>
+                    <input value={arrivalDate} onChange={(e) => setArrivalDate(e.target.value)} type="date" className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 py-2.5 text-sm text-slate-800 transition-colors focus:border-[#3B82F6] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3B82F6]" />
+                  </div>
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-bold text-slate-700">Number of Passengers <span className="text-red-500">*</span></label>
@@ -253,7 +358,6 @@ export default function PublicFlights() {
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-bold text-slate-800">Preview</h3>
           <div className="flex items-center gap-3">
-             
              {invoiceData && (
                 <button className="rounded-lg bg-slate-900 px-4 py-1.5 text-xs font-bold text-white transition hover:bg-slate-800">
                   PDF
@@ -316,7 +420,7 @@ export default function PublicFlights() {
                       {invoiceData.type === 'Parking' ? 'Period:' : 'Date of Flight:'}
                     </span>
                     <span className="font-medium text-slate-800">
-                      {invoiceData.type === 'Parking' ? `${invoiceData.arrivalDate} TO ${invoiceData.departureDate}` : invoiceData.arrivalDate}
+                      {invoiceData.type === 'Parking' ? `${invoiceData.arrivalStr} TO ${invoiceData.departureStr}` : invoiceData.arrivalStr}
                     </span>
                   </div>
                   <div className="grid grid-cols-[100px_1fr] gap-2 text-xs mt-1">
@@ -385,13 +489,17 @@ export default function PublicFlights() {
                     <div className="text-right font-medium text-slate-500">ADD SGST @9%</div>
                     <div className="text-right font-medium text-slate-800 shrink-0">{formatCurrency(invoiceData.sgst)}</div>
                   </div>
+                  <div className="grid grid-cols-[1fr_120px] gap-4 w-64 items-center">
+                    <div className="text-right font-medium text-slate-500">ADD IGST @18%</div>
+                    <div className="text-right font-medium text-slate-800 shrink-0">{formatCurrency(invoiceData.igst)}</div>
+                  </div>
                 </div>
               </div>
 
               {/* Bottom Gray Footer Block */}
               <div className="bg-[#f0f0ed] px-12 py-8 mt-12">
                 
-                {/* 1. AMOUNT IN WORDS MOVED TO TOP */}
+                {/* 1. AMOUNT IN WORDS */}
                 <div className="mb-6 border-b border-slate-300 pb-4">
                   <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Amount in Words</div>
                   <div className="text-xs font-medium text-slate-700 leading-relaxed uppercase">
@@ -404,8 +512,8 @@ export default function PublicFlights() {
                   <div className="space-y-1">
                     <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Bank Details</div>
                     <div className="text-xs text-slate-800 space-y-1 font-medium">
-                      <p>ICICI BANK, A/C No. 028205501441</p>
-                      <p>IFSC - ICIC0004352</p>
+                      <p>HDFC BANK, A/C No. 028205501441</p>
+                      <p>IFSC - HDFC0004352</p>
                       <p className="text-slate-500 text-[10px] uppercase tracking-wider pt-2 mb-0.5">Branch</p>
                       <p>Vardhaman Complex, Raipur Road,</p>
                       <p>Parsada, Bilaspur (C.G.) 495220</p>

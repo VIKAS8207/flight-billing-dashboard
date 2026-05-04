@@ -1,19 +1,26 @@
 import React, { useState } from 'react';
-import { IndianRupee, History, Save, Car, Users, ArrowRightCircle, Clock, PlaneTakeoff } from 'lucide-react';
+import { IndianRupee, History, Save, Users, ArrowRightCircle, Clock, PlaneTakeoff, Percent } from 'lucide-react';
 
 // Utility to format currency
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
 };
 
+// Utility to format percentages
+const formatPercent = (amount) => {
+  return `${amount}%`;
+};
+
 export default function ChargesMaster() {
   // Current Charge States
   const [parkingCharge, setParkingCharge] = useState(1000);
   const [udfCharge, setUdfCharge] = useState(200);
+  const [royaltyCharge, setRoyaltyCharge] = useState(36);
 
   // Input Field States
   const [parkingInput, setParkingInput] = useState(1000);
   const [udfInput, setUdfInput] = useState(200);
+  const [royaltyInput, setRoyaltyInput] = useState(36);
 
   // Audit Log State (Pre-populated with some history for visual reference)
   const [auditLog, setAuditLog] = useState([
@@ -24,7 +31,8 @@ export default function ChargesMaster() {
       field: 'UDF Charge (Per Passenger)',
       oldValue: 150,
       newValue: 200,
-      user: 'Admin (System)'
+      user: 'Admin (System)',
+      isPercent: false
     },
     {
       id: 2,
@@ -33,13 +41,14 @@ export default function ChargesMaster() {
       field: 'Parking Charge (Per Hour)',
       oldValue: 800,
       newValue: 1000,
-      user: 'Terminal Manager'
+      user: 'Terminal Manager',
+      isPercent: false
     }
   ]);
 
   // Handlers
   const handleUpdateParking = () => {
-    if (parkingInput === parkingCharge) return; // No change made
+    if (Number(parkingInput) === parkingCharge) return; // No change made
     
     const now = new Date();
     const newLog = {
@@ -49,7 +58,8 @@ export default function ChargesMaster() {
       field: 'Parking Charge (Per Hour)',
       oldValue: parkingCharge,
       newValue: Number(parkingInput),
-      user: 'Terminal Manager (Active)'
+      user: 'Terminal Manager (Active)',
+      isPercent: false
     };
 
     setParkingCharge(Number(parkingInput));
@@ -58,7 +68,7 @@ export default function ChargesMaster() {
   };
 
   const handleUpdateUDF = () => {
-    if (udfInput === udfCharge) return; // No change made
+    if (Number(udfInput) === udfCharge) return; // No change made
     
     const now = new Date();
     const newLog = {
@@ -68,12 +78,33 @@ export default function ChargesMaster() {
       field: 'UDF Charge (Per Passenger)',
       oldValue: udfCharge,
       newValue: Number(udfInput),
-      user: 'Terminal Manager (Active)'
+      user: 'Terminal Manager (Active)',
+      isPercent: false
     };
 
     setUdfCharge(Number(udfInput));
     setAuditLog([newLog, ...auditLog]);
     alert('UDF Charge updated successfully!');
+  };
+
+  const handleUpdateRoyalty = () => {
+    if (Number(royaltyInput) === royaltyCharge) return; // No change made
+    
+    const now = new Date();
+    const newLog = {
+      id: Date.now(),
+      date: now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+      time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+      field: 'Royalty Charge',
+      oldValue: royaltyCharge,
+      newValue: Number(royaltyInput),
+      user: 'Terminal Manager (Active)',
+      isPercent: true
+    };
+
+    setRoyaltyCharge(Number(royaltyInput));
+    setAuditLog([newLog, ...auditLog]);
+    alert('Royalty Charge updated successfully!');
   };
 
   return (
@@ -98,10 +129,10 @@ export default function ChargesMaster() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1">
         
         {/* LEFT COLUMN: Configuration Cards */}
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar">
           
           {/* Parking Charge Card */}
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-xl relative overflow-hidden group">
+          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-xl relative overflow-hidden group shrink-0">
             <div className="absolute top-0 right-0 p-6 opacity-5 text-[#007BFF] group-hover:scale-110 transition-transform duration-500 pointer-events-none">
               <PlaneTakeoff size={100} />
             </div>
@@ -142,7 +173,7 @@ export default function ChargesMaster() {
           </div>
 
           {/* UDF Charge Card */}
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-xl relative overflow-hidden group">
+          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-xl relative overflow-hidden group shrink-0">
             <div className="absolute top-0 right-0 p-6 opacity-5 text-emerald-500 group-hover:scale-110 transition-transform duration-500 pointer-events-none">
               <Users size={100} />
             </div>
@@ -181,10 +212,52 @@ export default function ChargesMaster() {
               </button>
             </div>
           </div>
+
+          {/* Royalty Master Card */}
+          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-xl relative overflow-hidden group shrink-0">
+            <div className="absolute top-0 right-0 p-6 opacity-5 text-purple-500 group-hover:scale-110 transition-transform duration-500 pointer-events-none">
+              <Percent size={100} />
+            </div>
+            
+            <div className="flex items-center gap-3 mb-6 relative z-10">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-500">
+                <Percent size={20} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-800">Royalty Charge</h3>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Applied as percentage</p>
+              </div>
+            </div>
+
+            <div className="flex items-end gap-4 relative z-10">
+              <div className="flex-1">
+                <label className="mb-2 block text-[13px] font-bold text-slate-700">Current Rate (%)</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-slate-400">
+                    <Percent size={16} />
+                  </div>
+                  <input 
+                    type="number" 
+                    value={royaltyInput}
+                    onChange={(e) => setRoyaltyInput(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-slate-900 font-bold outline-none focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all text-lg"
+                  />
+                </div>
+              </div>
+              <button 
+                onClick={handleUpdateRoyalty}
+                disabled={Number(royaltyInput) === royaltyCharge}
+                className="flex h-[52px] items-center gap-2 rounded-xl bg-purple-500 px-6 text-sm font-bold text-white shadow-md shadow-purple-500/20 transition-all hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-purple-500"
+              >
+                <Save size={18} /> Update
+              </button>
+            </div>
+          </div>
+
         </div>
 
         {/* RIGHT COLUMN: Audit History Timeline */}
-        <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-xl flex flex-col h-[500px]">
+        <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-xl flex flex-col h-[full]">
           <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
               <History size={16} />
@@ -197,7 +270,7 @@ export default function ChargesMaster() {
             <div className="absolute left-[15px] top-2 bottom-2 w-0.5 bg-slate-100 rounded-full"></div>
 
             <div className="flex flex-col gap-6">
-              {auditLog.map((log, index) => (
+              {auditLog.map((log) => (
                 <div key={log.id} className="relative pl-10">
                   {/* Timeline dot */}
                   <div className="absolute left-0 top-1 h-8 w-8 rounded-full bg-white border-4 border-slate-50 flex items-center justify-center shadow-sm">
@@ -218,14 +291,18 @@ export default function ChargesMaster() {
                     <div className="flex items-center gap-3 bg-white p-3 rounded-lg border border-slate-100">
                       <div className="flex-1 text-center">
                         <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1">Previous</div>
-                        <div className="text-sm font-bold text-slate-600 line-through decoration-slate-300">{formatCurrency(log.oldValue)}</div>
+                        <div className="text-sm font-bold text-slate-600 line-through decoration-slate-300">
+                          {log.isPercent ? formatPercent(log.oldValue) : formatCurrency(log.oldValue)}
+                        </div>
                       </div>
                       <div className="text-slate-300">
                         <ArrowRightCircle size={20} />
                       </div>
                       <div className="flex-1 text-center">
                         <div className="text-[10px] uppercase font-bold tracking-wider text-[#007BFF] mb-1">Updated</div>
-                        <div className="text-sm font-bold text-[#007BFF]">{formatCurrency(log.newValue)}</div>
+                        <div className="text-sm font-bold text-[#007BFF]">
+                          {log.isPercent ? formatPercent(log.newValue) : formatCurrency(log.newValue)}
+                        </div>
                       </div>
                     </div>
 

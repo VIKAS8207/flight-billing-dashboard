@@ -10,6 +10,9 @@ import PrivateFlights from './pages/PrivateFlights';
 import Payment from './pages/Payment';
 import BudgetTracking from './pages/BudgetTracking';
 import ChargesMaster from './pages/ChargesMaster';
+import FlightMaster from './pages/FlightMaster';
+import AirlineMaster from './pages/AirlineMaster';
+import BudgetMaster from './pages/BudgetMaster';
 
 export default function App() {
   return (
@@ -29,6 +32,9 @@ export default function App() {
           <Route path="payment" element={<Payment />} />
           <Route path="budget" element={<BudgetTracking />} />
           <Route path="charges-master" element={<ChargesMaster />} />
+          <Route path="flight-master" element={<FlightMaster />} />
+          <Route path="airline-master" element={<AirlineMaster />} />
+          <Route path="budget-master" element={<BudgetMaster />} />
         </Route>
 
         {/* Fallback: Send any unknown routes to login */}
