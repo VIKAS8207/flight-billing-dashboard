@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@layer components {
+  .input-style {
+    @apply w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 
+           text-sm text-white transition-all outline-none;
+    @apply focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/50;
+  }
+
+  .btn-primary {
+    @apply flex w-full items-center justify-center rounded-lg bg-[#007BFF] 
+           py-3.5 text-sm font-bold text-white transition-all 
+           hover:brightness-110 active:scale-[0.99];
+  }
+}
