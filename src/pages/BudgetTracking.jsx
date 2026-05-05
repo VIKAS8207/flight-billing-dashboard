@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { IndianRupee, TrendingUp, AlertCircle, Wrench, Shield, Plane, Briefcase } from 'lucide-react';
+// FIX 1: Added 'Download' to the imports
+import { IndianRupee, TrendingUp, CheckCircle2, LayoutGrid, ArrowDownToLine, Plus, Download } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 // --- CUSTOM ANIMATION HOOK ---
 const useCountUp = (end, duration = 1500) => {
@@ -26,7 +28,7 @@ const useCountUp = (end, duration = 1500) => {
 };
 
 // Utility to format currency
-const formatCrores = (amount) => {
+const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
@@ -34,54 +36,46 @@ const formatCrores = (amount) => {
   }).format(amount);
 };
 
-// --- MULTI-YEAR MOCK DATA ---
+// --- STYLISH GRADIENTS FOR BARS ---
+const chartGradients = [
+  'bg-gradient-to-r from-[#007BFF] to-[#60A5FA]', // Blue
+  'bg-gradient-to-r from-[#10B981] to-[#34D399]', // Emerald
+  'bg-gradient-to-r from-[#8B5CF6] to-[#A78BFA]', // Purple
+  'bg-gradient-to-r from-[#F59E0B] to-[#FBBF24]', // Amber
+  'bg-gradient-to-r from-[#F43F5E] to-[#FB7185]', // Rose
+  'bg-gradient-to-r from-[#06B6D4] to-[#22D3EE]', // Cyan
+  'bg-gradient-to-r from-[#6366F1] to-[#818CF8]'  // Indigo
+];
+
+// --- RESTRUCTURED MOCK DATA ---
 const yearlyData = {
   '2025-26': {
-    annualFund: 450000000,
-    totalSpent: 420000000,
-    quarters: [
-      { id: 'Q1', months: 'Apr - Jun', allocated: 100000000, spent: 100000000, status: 'Completed' },
-      { id: 'Q2', months: 'Jul - Sep', allocated: 120000000, spent: 115000000, status: 'Completed' },
-      { id: 'Q3', months: 'Oct - Dec', allocated: 130000000, spent: 125000000, status: 'Completed' },
-      { id: 'Q4', months: 'Jan - Mar', allocated: 100000000, spent: 80000000, status: 'Completed' },
-    ],
-    departments: [
-      { name: 'Infrastructure Maintenance', icon: <Wrench size={18}/>, allocated: 180000000, spent: 175000000 },
-      { name: 'Operational Growth', icon: <TrendingUp size={18}/>, allocated: 120000000, spent: 110000000 },
-      { name: 'Security & Surveillance', icon: <Shield size={18}/>, allocated: 80000000, spent: 75000000 },
-      { name: 'Passenger Services', icon: <Plane size={18}/>, allocated: 70000000, spent: 60000000 },
+    promisedAmount: 450000000,
+    receivedAmount: 420000000,
+    heads: [
+      { id: 1, name: 'Infrastructure Maintenance', spent: 175000000 },
+      { id: 2, name: 'Operational Growth', spent: 110000000 },
+      { id: 3, name: 'Security & Surveillance', spent: 75000000 },
+      { id: 4, name: 'Passenger Services', spent: 60000000 },
     ]
   },
   '2026-27': {
-    annualFund: 500000000,
-    totalSpent: 185000000,
-    quarters: [
-      { id: 'Q1', months: 'Apr - Jun', allocated: 100000000, spent: 85000000, status: 'Completed' },
-      { id: 'Q2', months: 'Jul - Sep', allocated: 120000000, spent: 100000000, status: 'Active' },
-      { id: 'Q3', months: 'Oct - Dec', allocated: 150000000, spent: 0, status: 'Upcoming' },
-      { id: 'Q4', months: 'Jan - Mar', allocated: 130000000, spent: 0, status: 'Planned' },
-    ],
-    departments: [
-      { name: 'Infrastructure Maintenance', icon: <Wrench size={18}/>, allocated: 200000000, spent: 90000000 },
-      { name: 'Operational Growth', icon: <TrendingUp size={18}/>, allocated: 150000000, spent: 60000000 },
-      { name: 'Security & Surveillance', icon: <Shield size={18}/>, allocated: 80000000, spent: 25000000 },
-      { name: 'Passenger Services', icon: <Plane size={18}/>, allocated: 70000000, spent: 10000000 },
+    promisedAmount: 500000000,
+    receivedAmount: 250000000,
+    heads: [
+      { id: 1, name: 'Infrastructure Maintenance', spent: 90000000 },
+      { id: 2, name: 'Operational Growth', spent: 60000000 },
+      { id: 3, name: 'Security & Surveillance', spent: 25000000 },
+      { id: 4, name: 'Passenger Services', spent: 10000000 },
+      { id: 5, name: 'IT & Digital Infrastructure', spent: 45000000 }, 
     ]
   },
   '2027-28': {
-    annualFund: 600000000,
-    totalSpent: 0,
-    quarters: [
-      { id: 'Q1', months: 'Apr - Jun', allocated: 150000000, spent: 0, status: 'Planned' },
-      { id: 'Q2', months: 'Jul - Sep', allocated: 150000000, spent: 0, status: 'Planned' },
-      { id: 'Q3', months: 'Oct - Dec', allocated: 150000000, spent: 0, status: 'Planned' },
-      { id: 'Q4', months: 'Jan - Mar', allocated: 150000000, spent: 0, status: 'Planned' },
-    ],
-    departments: [
-      { name: 'Infrastructure Maintenance', icon: <Wrench size={18}/>, allocated: 250000000, spent: 0 },
-      { name: 'Operational Growth', icon: <TrendingUp size={18}/>, allocated: 150000000, spent: 0 },
-      { name: 'Security & Surveillance', icon: <Shield size={18}/>, allocated: 100000000, spent: 0 },
-      { name: 'Passenger Services', icon: <Plane size={18}/>, allocated: 100000000, spent: 0 },
+    promisedAmount: 600000000,
+    receivedAmount: 50000000,
+    heads: [
+      { id: 1, name: 'Infrastructure Maintenance', spent: 15000000 },
+      { id: 2, name: 'Advance Equipment Booking', spent: 25000000 },
     ]
   }
 };
@@ -103,21 +97,22 @@ export default function BudgetTracking() {
   }, []);
   
   const currentData = yearlyData[selectedYear];
-  const { annualFund, totalSpent, quarters, departments } = currentData;
+  const { promisedAmount, receivedAmount, heads } = currentData;
 
-  const animatedAnnual = useCountUp(annualFund);
-  const percentUsed = (totalSpent / annualFund) * 100;
+  const animatedPromised = useCountUp(promisedAmount);
+  const animatedReceived = useCountUp(receivedAmount);
 
-  const radius = 60;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (percentUsed / 100) * circumference;
+  const availableYears = Object.keys(yearlyData);
 
-  const availableYears = ['2025-26', '2026-27', '2027-28'];
+  // Math for Dynamic Graph (Find the highest spent amount to scale the bars)
+  const maxSpent = Math.max(...heads.map(h => h.spent), 1); 
 
   return (
     <div className="flex min-h-full w-full flex-col gap-6 font-sans pb-4">
       
-      {/* HEADER */}
+      {/* ==========================================
+          HEADER
+          ========================================== */}
       <div className="relative p-6 flex flex-col sm:flex-row justify-between items-center gap-4 z-20">
         <div className="absolute inset-0 bg-gradient-to-b from-[#eef6ff] to-[#d9eeff] rounded-2xl shadow-md border border-[#007BFF]/10 overflow-hidden -z-10">
           <svg className="absolute bottom-0 left-0 w-full h-16 text-white" viewBox="0 0 1440 54" fill="currentColor" preserveAspectRatio="none">
@@ -131,181 +126,191 @@ export default function BudgetTracking() {
           <p className="text-sm text-slate-600 font-medium mt-1">Macro budget allocations and micro departmental burn rates.</p>
         </div>
 
-        {/* Custom Financial Year Dropdown */}
-        <div className="relative z-50" ref={dropdownRef}>
-          <button 
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className={`flex items-center gap-2 rounded-xl bg-white/80 backdrop-blur-sm px-4 py-2 shadow-sm border transition-all text-sm font-bold text-slate-700 hover:bg-white ${isDropdownOpen ? 'border-[#007BFF] ring-2 ring-[#007BFF]/20' : 'border-white'}`}
+        {/* FIX 2: Wrapped buttons nicely in a flex container */}
+        <div className="flex items-center gap-3 relative z-50">
+          
+          {/* FIX 3: Removed <button> wrapper and updated colors to blue */}
+          <Link 
+            to="/budget-report"
+            className="flex items-center gap-2 rounded-xl bg-[#007BFF] px-4 py-2 shadow-md transition-all text-sm font-bold text-white hover:bg-blue-600 hover:shadow-lg hover:-translate-y-0.5"
           >
-            FY {selectedYear}
-            <svg className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-[#007BFF]' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
+            <Download size={16} />
+            <span className="hidden sm:inline">Download Report</span>
+          </Link>
 
-          {/* Absolute Dropdown Menu */}
-          {isDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-36 bg-white rounded-[10px] shadow-xl border border-slate-100 overflow-hidden z-[100]">
-              <div className="flex flex-col">
-                {availableYears.map((year) => (
-                  <button
-                    key={year}
-                    onClick={() => {
-                      setSelectedYear(year);
-                      setIsDropdownOpen(false);
-                    }}
-                    className={`w-full text-left px-4 py-2.5 text-sm font-semibold transition-colors ${
-                      selectedYear === year 
-                        ? 'bg-blue-50 text-[#007BFF]' 
-                        : 'text-slate-600 hover:bg-[#F0F8FF] hover:text-[#007BFF]'
-                    }`}
-                  >
-                    FY {year}
-                  </button>
-                ))}
+          {/* Custom Financial Year Dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <button 
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className={`flex items-center gap-2 rounded-xl bg-white/80 backdrop-blur-sm px-4 py-2 shadow-sm border transition-all text-sm font-bold text-slate-700 hover:bg-white ${isDropdownOpen ? 'border-[#007BFF] ring-2 ring-[#007BFF]/20' : 'border-white'}`}
+            >
+              FY {selectedYear}
+              <svg className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-[#007BFF]' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {isDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-36 bg-white rounded-[10px] shadow-xl border border-slate-100 overflow-hidden z-[100]">
+                <div className="flex flex-col">
+                  {availableYears.map((year) => (
+                    <button
+                      key={year}
+                      onClick={() => {
+                        setSelectedYear(year);
+                        setIsDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-2.5 text-sm font-semibold transition-colors ${
+                        selectedYear === year 
+                          ? 'bg-blue-50 text-[#007BFF]' 
+                          : 'text-slate-600 hover:bg-[#F0F8FF] hover:text-[#007BFF]'
+                      }`}
+                    >
+                      FY {year}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
-      {/* BENTO BOX GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
-        
-        {/* --- LEFT COLUMN (Macro & Mid View) --- */}
-        <div className="col-span-1 lg:col-span-2 flex flex-col gap-6">
-          
-          {/* 1. Macro View: Annual Fund Hero Card */}
-          <div className="relative rounded-2xl bg-gradient-to-br from-[#007BFF] to-[#3b9aff] p-8 shadow-xl shadow-[#007BFF]/20 flex items-center justify-between overflow-hidden group">
-            <div className="absolute -right-10 -top-10 h-64 w-64 rounded-full border-[20px] border-white/10 group-hover:scale-110 transition-transform duration-700"></div>
-            
-            <div className="relative z-10 text-white">
-              <p className="text-sm font-bold uppercase tracking-widest text-blue-100 mb-2">Total Annual Budget ({selectedYear})</p>
-              <h3 className="text-5xl font-extrabold tracking-tight tabular-nums">
-                {formatCrores(animatedAnnual)}
-              </h3>
-              <div className="mt-4 flex items-center gap-4">
-                <div className="flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 backdrop-blur-md text-sm font-semibold">
-                  <TrendingUp size={16} /> Disbursed: {formatCrores(totalSpent)}
-                </div>
-              </div>
-            </div>
+      {/* ==========================================
+          CONTENT AREA
+          ========================================== */}
+      
+      {/* 1. TOP CARDS: Promised vs Received */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+        <div className="rounded-2xl bg-white border border-slate-100 p-6 shadow-sm flex items-center gap-5">
+          <div className="h-14 w-14 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="text-[#007BFF]" size={28} />
+          </div>
+          <div>
+            <p className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-1">Total Promised Annual Income</p>
+            <h3 className="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">
+              {formatCurrency(animatedPromised)}
+            </h3>
+          </div>
+        </div>
 
-            <div className="relative z-10 flex items-center justify-center">
-              <svg className="h-36 w-36 transform -rotate-90">
-                <circle cx="72" cy="72" r={radius} stroke="rgba(255,255,255,0.2)" strokeWidth="12" fill="none" />
-                <circle 
-                  cx="72" cy="72" r={radius} 
-                  stroke="white" strokeWidth="12" fill="none" 
-                  strokeDasharray={circumference} 
-                  strokeDashoffset={strokeDashoffset} 
-                  strokeLinecap="round"
-                  className="transition-all duration-1000 ease-out"
-                />
-              </svg>
-              <div className="absolute flex flex-col items-center justify-center">
-                <span className="text-2xl font-bold text-white">{percentUsed.toFixed(1)}%</span>
-                <span className="text-[10px] text-blue-100 font-medium uppercase tracking-wider">Burned</span>
+        <div className="rounded-2xl bg-white border border-slate-100 p-6 shadow-sm flex items-center gap-5">
+          <div className="h-14 w-14 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+            <ArrowDownToLine className="text-emerald-600" size={28} />
+          </div>
+          <div>
+            <p className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-1">Amount Received Till Now</p>
+            <h3 className="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">
+              {formatCurrency(animatedReceived)}
+            </h3>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. MAIN GRID: Graph & Heads List */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-10">
+        
+        {/* ==========================================
+            LEFT: STYLISH EXPENSE GRAPH
+            ========================================== */}
+        <div className="rounded-2xl bg-white border border-slate-100 p-8 shadow-lg shadow-slate-200/40 flex flex-col relative overflow-hidden group">
+          
+          {/* Decorative Ambient Gradients (Blobs) */}
+          <div className="absolute -top-32 -right-32 w-80 h-80 bg-gradient-to-br from-[#007BFF]/10 to-[#8B5CF6]/10 rounded-full blur-3xl pointer-events-none group-hover:scale-110 transition-transform duration-1000 ease-in-out"></div>
+          <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-gradient-to-tr from-[#10B981]/10 to-[#06B6D4]/10 rounded-full blur-3xl pointer-events-none group-hover:scale-110 transition-transform duration-1000 ease-in-out"></div>
+          
+          <div className="relative z-10 flex items-center justify-between mb-10">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
+                <TrendingUp size={18} className="text-[#007BFF]" />
               </div>
+              <h3 className="text-sm font-extrabold uppercase tracking-widest text-slate-800">Expense Analysis</h3>
             </div>
           </div>
 
-          {/* 2. Mid View: Quarterly Tranches */}
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-xl flex-1 flex flex-col">
-            <h3 className="text-[13px] font-bold uppercase tracking-widest text-slate-500 mb-6">Tranche Distribution Flow</h3>
-            
-            <div className="flex flex-col gap-4 flex-1">
-              {quarters.map((q) => {
-                const getStatusColor = (status) => {
-                  if (status === 'Active') return 'bg-emerald-100 text-emerald-700';
-                  if (status === 'Completed') return 'bg-slate-100 text-slate-600';
-                  if (status === 'Upcoming') return 'bg-blue-100 text-[#007BFF]';
-                  return 'bg-amber-100 text-amber-700';
-                };
+          <div className="relative z-10 flex-1 flex flex-col justify-center gap-7">
+            {heads.length === 0 ? (
+              <p className="text-sm text-slate-400 italic text-center py-10">No expenses recorded yet.</p>
+            ) : (
+              heads.map((head, index) => {
+                // Calculate percentage relative to the highest expense for dynamic scaling
+                const widthPercent = (head.spent / maxSpent) * 100;
+                const barGradient = chartGradients[index % chartGradients.length];
 
                 return (
-                  <div 
-                    key={q.id} 
-                    className="flex items-center gap-4 p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200 hover:shadow-sm transition-all"
-                  >
-                    <div className="h-14 w-14 shrink-0 rounded-xl bg-white shadow-sm border border-slate-200 flex items-center justify-center text-slate-800 font-extrabold text-xl">
-                      {q.id}
+                  <div key={head.id} className="relative group/item">
+                    <div className="flex justify-between items-end mb-2.5">
+                      <span className="text-[13px] font-bold text-slate-600 truncate pr-4 group-hover/item:text-[#007BFF] transition-colors duration-300">
+                        {head.name}
+                      </span>
+                      <span className="text-[14px] font-extrabold text-slate-900 shrink-0 tabular-nums">
+                        {formatCurrency(head.spent)}
+                      </span>
                     </div>
-
-                    <div className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div>
-                        <h4 className="text-[14px] font-bold text-slate-800">{q.months}</h4>
-                        <span className={`inline-block mt-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${getStatusColor(q.status)}`}>
-                          {q.status}
-                        </span>
-                      </div>
-                      
-                      <div className="text-left sm:text-right">
-                        <p className="text-sm font-bold text-slate-800">{formatCrores(q.allocated)}</p>
-                        <p className="text-xs font-semibold text-slate-500 mt-0.5">Spent: {formatCrores(q.spent)}</p>
+                    
+                    {/* Stylish Graph Bar */}
+                    <div className="h-2.5 w-full bg-slate-100/80 rounded-full overflow-hidden shadow-inner relative backdrop-blur-sm">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-1000 ease-out relative overflow-hidden ${barGradient} shadow-sm`}
+                        style={{ width: `${widthPercent}%` }}
+                      >
+                        {/* Subtle inner shine for the gradient bar */}
+                        <div className="absolute top-0 left-0 w-full h-[1px] bg-white/40"></div>
                       </div>
                     </div>
                   </div>
                 );
-              })}
-            </div>
+              })
+            )}
           </div>
         </div>
 
-        {/* --- RIGHT COLUMN (Micro View: Departments) --- */}
-        <div className="col-span-1 rounded-2xl border border-slate-100 bg-white p-6 shadow-xl flex flex-col">
+        {/* RIGHT: Simple Department Heads List */}
+        <div className="rounded-2xl bg-white border border-slate-100 p-6 shadow-sm flex flex-col max-h-[500px]">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-[13px] font-bold uppercase tracking-widest text-slate-500">Departmental Burn (Annual)</h3>
-            <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center">
-              <Briefcase size={14} className="text-slate-400" />
+            <div className="flex items-center gap-2">
+              <LayoutGrid size={18} className="text-slate-400" />
+              <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500">Expense Heads</h3>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded-md">
+                {heads.length} Heads
+              </span>
+              <Link 
+                to="/budget-master"
+                className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-slate-100 text-slate-700 font-bold hover:bg-slate-200 transition-all text-xs"
+              >
+                <Plus size={14} /> Add Head
+              </Link>
             </div>
           </div>
 
-          <div className="flex flex-col gap-5 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-            {departments.map((dept, index) => {
-              const spentRatio = dept.allocated > 0 ? (dept.spent / dept.allocated) * 100 : 0;
-              const isWarning = spentRatio > 85;
-              const isDanger = spentRatio > 95;
-
-              let barColor = 'bg-[#007BFF]';
-              if (isDanger) barColor = 'bg-rose-500';
-              else if (isWarning) barColor = 'bg-amber-500';
-
-              return (
-                <div key={index} className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white transition-colors group">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`p-2 rounded-lg ${isWarning ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>
-                      {dept.icon}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="text-[13px] font-bold text-slate-800 leading-tight">{dept.name}</h4>
-                      <p className="text-[10px] uppercase tracking-wider text-slate-400 mt-0.5">Budget: {formatCrores(dept.allocated)}</p>
-                    </div>
-                    {isWarning && <AlertCircle size={16} className={isDanger ? 'text-rose-500' : 'text-amber-500'} />}
+          <div className="flex flex-col gap-3 overflow-y-auto pr-2 custom-scrollbar">
+            {heads.length === 0 ? (
+              <p className="text-sm text-slate-400 italic text-center py-10">Waiting for data from Master...</p>
+            ) : (
+              heads.map((head, index) => (
+                <div 
+                  key={head.id} 
+                  className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-slate-100/80 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    {/* Small color indicator matching the stylish graph */}
+                    <div className={`h-3 w-3 rounded-full shadow-sm ${chartGradients[index % chartGradients.length]}`} />
+                    <h4 className="text-sm font-bold text-slate-800">{head.name}</h4>
                   </div>
-
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs font-bold">
-                      <span className={isDanger ? 'text-rose-600' : isWarning ? 'text-amber-600' : 'text-slate-700'}>
-                        {formatCrores(dept.spent)}
-                      </span>
-                      <span className="text-slate-400">{spentRatio.toFixed(0)}%</span>
-                    </div>
-                    
-                    <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden relative">
-                      <div 
-                        className={`absolute left-0 top-0 h-full rounded-full transition-all duration-1000 ease-out ${barColor}`} 
-                        style={{ width: `${Math.min(spentRatio, 100)}%` }}
-                      ></div>
-                    </div>
+                  <div className="text-right">
+                    <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-0.5">Spent</p>
+                    <p className="text-sm font-bold text-slate-900">{formatCurrency(head.spent)}</p>
                   </div>
                 </div>
-              );
-            })}
+              ))
+            )}
           </div>
         </div>
 
       </div>
+
     </div>
   );
 }

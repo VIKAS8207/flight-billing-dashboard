@@ -32,6 +32,7 @@ const SidebarLink = ({ to, icon, label, badge, active, onClick }) => (
 export default function DashboardLayout() {
   const location = useLocation();
   const [isBillingOpen, setIsBillingOpen] = useState(false);
+  const [isBudgetTrackingOpen, setIsBudgetTrackingOpen] = useState(false); // NEW STATE
 
   // Reference for the sidebar to detect clicks outside
   const sidebarRef = useRef(null);
@@ -44,6 +45,7 @@ export default function DashboardLayout() {
   // Logic: Close all dropdowns
   const closeDropdowns = () => {
     setIsBillingOpen(false);
+    setIsBudgetTrackingOpen(false); // CLOSE NEW DROPDOWN
   };
 
   // Logic: Detect clicks outside the sidebar to close dropdowns
@@ -144,13 +146,30 @@ export default function DashboardLayout() {
                   icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>} 
                 />
 
-                <SidebarLink 
-                  to="/budget" 
-                  label="Budget Tracking" 
-                  onClick={closeDropdowns}
-                  active={location.pathname === '/budget'}
-                  icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>} 
-                />
+                {/* BUDGET TRACKING DROPDOWN (UPDATED) */}
+                <div>
+                  <button 
+                    onClick={() => setIsBudgetTrackingOpen(!isBudgetTrackingOpen)}
+                    className="group flex w-full items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 text-slate-500 hover:bg-[#B0E0E6]/20 hover:text-[#007BFF] font-medium"
+                  >
+                    <div className="flex items-center gap-3">
+                      <svg className="h-4 w-4 text-slate-400 group-hover:text-[#007BFF] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                      <span className="text-[13px]">Budget Tracking</span>
+                    </div>
+                    <svg className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${isBudgetTrackingOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                  </button>
+                  
+                  <div className={`overflow-hidden transition-all duration-300 ${isBudgetTrackingOpen ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
+                    <div className="ml-9 mt-1 flex flex-col gap-1 border-l-2 border-[#B0E0E6]/50 pl-3">
+                      <Link to="/budget" className={`py-1.5 text-[13px] font-semibold transition-colors ${location.pathname === '/budget' ? 'text-[#007BFF]' : 'text-slate-500 hover:text-[#007BFF]'}`}>
+                        Track Expense
+                      </Link>
+                      <Link to="/budget-master" className={`py-1.5 text-[13px] font-semibold transition-colors ${location.pathname === '/budget-master' ? 'text-[#007BFF]' : 'text-slate-500 hover:text-[#007BFF]'}`}>
+                        Add Expense
+                      </Link>
+                    </div>
+                  </div>
+                </div>
                 
               </nav>
             </div>
@@ -187,15 +206,8 @@ export default function DashboardLayout() {
                   active={location.pathname === '/airline-master'}
                   icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>} 
                 />
-
-                {/* BUDGET MASTER */}
-                <SidebarLink 
-                  to="/budget-master" 
-                  label="Budget Master" 
-                  onClick={closeDropdowns}
-                  active={location.pathname === '/budget-master'}
-                  icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" /></svg>} 
-                />
+                
+                {/* Budget Master removed from here as requested */}
               </nav>
 
               {/* SIGNATURE UPLOAD COMPONENT */}
