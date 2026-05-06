@@ -14,6 +14,7 @@ import FlightMaster from './pages/FlightMaster';
 import AirlineMaster from './pages/AirlineMaster';
 import BudgetMaster from './pages/BudgetMaster';
 import BudgetReport from './pages/BudgetReport';
+import Notifications from './pages/Notifications';
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="airline-master" element={<AirlineMaster />} />
           <Route path="budget-master" element={<BudgetMaster />} />
           <Route path="budget-report" element={<BudgetReport />} />
+          <Route path="notifications" element={<Notifications />} />
         </Route>
 
         {/* Fallback: Send any unknown routes to login */}
