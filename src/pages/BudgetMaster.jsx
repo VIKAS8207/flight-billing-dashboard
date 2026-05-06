@@ -195,7 +195,7 @@ export default function BudgetMaster() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Promised Input */}
                 <div>
-                  <label className="mb-2 block text-xs font-bold text-slate-500 uppercase tracking-wider">Total Promised Amount</label>
+                  <label className="mb-2 block text-xs font-bold text-slate-500 uppercase tracking-wider">Annual Budget</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-slate-400">
                       <IndianRupee size={20} />

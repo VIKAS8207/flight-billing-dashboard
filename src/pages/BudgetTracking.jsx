@@ -187,7 +187,7 @@ export default function BudgetTracking() {
             <CheckCircle2 className="text-[#007BFF]" size={28} />
           </div>
           <div>
-            <p className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-1">Total Promised Annual Income</p>
+            <p className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-1">Annual Budget</p>
             <h3 className="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">
               {formatCurrency(animatedPromised)}
             </h3>

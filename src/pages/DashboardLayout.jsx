@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { Plane, Upload, CheckCircle2, Trash2 } from 'lucide-react';
+import { Plane, Settings } from 'lucide-react';
 
 // Reusable component for sidebar links
 const SidebarLink = ({ to, icon, label, badge, active, onClick }) => (
@@ -32,20 +32,15 @@ const SidebarLink = ({ to, icon, label, badge, active, onClick }) => (
 export default function DashboardLayout() {
   const location = useLocation();
   const [isBillingOpen, setIsBillingOpen] = useState(false);
-  const [isBudgetTrackingOpen, setIsBudgetTrackingOpen] = useState(false); // NEW STATE
+  const [isBudgetTrackingOpen, setIsBudgetTrackingOpen] = useState(false);
 
   // Reference for the sidebar to detect clicks outside
   const sidebarRef = useRef(null);
 
-  // States and refs for Signature Upload
-  const [signatureFile, setSignatureFile] = useState(null);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const fileInputRef = useRef(null);
-
   // Logic: Close all dropdowns
   const closeDropdowns = () => {
     setIsBillingOpen(false);
-    setIsBudgetTrackingOpen(false); // CLOSE NEW DROPDOWN
+    setIsBudgetTrackingOpen(false);
   };
 
   // Logic: Detect clicks outside the sidebar to close dropdowns
@@ -60,21 +55,6 @@ export default function DashboardLayout() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
-  // Handlers for file upload and deletion
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setSignatureFile(e.target.files[0]);
-    }
-  };
-
-  const confirmDelete = () => {
-    setSignatureFile(null);
-    setShowConfirmModal(false);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''; // Reset the input
-    }
-  };
 
   return (
     <div className="flex h-screen w-full bg-white font-sans antialiased text-slate-900 overflow-hidden relative">
@@ -146,7 +126,7 @@ export default function DashboardLayout() {
                   icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>} 
                 />
 
-                {/* BUDGET TRACKING DROPDOWN (UPDATED) */}
+                {/* BUDGET TRACKING DROPDOWN */}
                 <div>
                   <button 
                     onClick={() => setIsBudgetTrackingOpen(!isBudgetTrackingOpen)}
@@ -174,7 +154,7 @@ export default function DashboardLayout() {
               </nav>
             </div>
 
-            <div>
+            <div className="mb-6">
               <div className="mb-2 px-2 text-[11px] font-bold tracking-widest text-slate-400 uppercase">
                 Masters
               </div>
@@ -197,56 +177,26 @@ export default function DashboardLayout() {
                   active={location.pathname === '/flight-master'}
                   icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>} 
                 />
+              </nav>
+            </div>
 
-                {/* AIRLINE MASTER */}
+            {/* SYSTEM AREA */}
+            <div>
+              <div className="mb-2 px-2 text-[11px] font-bold tracking-widest text-slate-400 uppercase">
+                System
+              </div>
+              <nav className="flex flex-col gap-1.5">
+                {/* AIRPORT SETTINGS */}
                 <SidebarLink 
                   to="/airline-master" 
-                  label="Airline Master" 
+                  label="Airport Settings" 
                   onClick={closeDropdowns}
                   active={location.pathname === '/airline-master'}
-                  icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>} 
+                  icon={<Settings className="h-4 w-4" strokeWidth={2} />} 
                 />
-                
-                {/* Budget Master removed from here as requested */}
               </nav>
-
-              {/* SIGNATURE UPLOAD COMPONENT */}
-              <div className="mt-6 mx-2 rounded-2xl border border-[#007BFF]/20 bg-gradient-to-br from-white to-[#B0E0E6]/30 p-4 text-center hover:shadow-lg hover:shadow-[#007BFF]/10 transition-all duration-300 group">
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileChange} 
-                  className="hidden" 
-                  accept="image/*,.pdf" 
-                />
-                
-                {!signatureFile ? (
-                  <div className="cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                    <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-[#007BFF] to-[#B0E0E6] text-white shadow-md group-hover:scale-110 transition-transform">
-                      <Upload className="h-4 w-4" />
-                    </div>
-                    <p className="text-[13px] font-bold text-slate-800">Upload Signature</p>
-                    <p className="text-[10px] text-slate-500 mt-1 font-medium">Terminal Manager</p>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md">
-                      <CheckCircle2 className="h-5 w-5" />
-                    </div>
-                    <p className="text-[13px] font-bold text-emerald-600 truncate px-1">
-                      {signatureFile.name}
-                    </p>
-                    <button 
-                      onClick={() => setShowConfirmModal(true)}
-                      className="mt-3 flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg text-[11px] font-bold text-rose-500 bg-rose-50 hover:bg-rose-100 hover:text-rose-600 transition-colors"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Change / Delete
-                    </button>
-                  </div>
-                )}
-              </div>
             </div>
+
           </div>
 
           {/* LOGOUT BUTTON AT BOTTOM */}
@@ -318,32 +268,6 @@ export default function DashboardLayout() {
         </div>
 
       </div>
-
-      {/* CONFIRMATION MODAL PORTAL */}
-      {showConfirmModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl p-6 shadow-2xl w-80 max-w-[90%] transform transition-all border border-slate-100">
-            <h3 className="text-lg font-extrabold text-slate-900 mb-2">Modify Signature?</h3>
-            <p className="text-[13px] text-slate-500 mb-6 leading-relaxed">
-              Are you sure you want to delete or change the currently uploaded signature file?
-            </p>
-            <div className="flex gap-3">
-              <button 
-                onClick={() => setShowConfirmModal(false)}
-                className="flex-1 py-2.5 rounded-xl text-[13px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={confirmDelete}
-                className="flex-1 py-2.5 rounded-xl text-[13px] font-bold text-white bg-rose-500 hover:bg-rose-600 shadow-md shadow-rose-500/20 transition-all"
-              >
-                Yes, Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Styled Scrollbar */}
       <style>{`

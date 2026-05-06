@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   History, Save, Building2, MapPin, FileText, Mail, 
-  ArrowRightCircle, Clock, Plane 
+  ArrowRightCircle, Clock, Plane, Upload, Image as ImageIcon, Trash2, CheckCircle2
 } from 'lucide-react';
 
 // Initial Mock Data for the Airport
@@ -9,7 +9,8 @@ const initialProfile = {
   name: 'Bilasa Devi Kevat Airport', 
   address: 'Bilaspur, Chhattisgarh, India - 495001', 
   gstin: '22AAAAA0000A1Z5', 
-  email: 'billing@bilaspurairport.in' 
+  email: 'billing@bilaspurairport.in',
+  signatureUrl: null // Added signature field
 };
 
 // Mock Initial Audit History
@@ -40,9 +41,53 @@ export default function AirportMaster() {
   
   // Form State
   const [formData, setFormData] = useState({ ...initialProfile });
+  
+  // Signature Upload States
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const fileInputRef = useRef(null);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // Image Upload Handlers
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const imageUrl = URL.createObjectURL(file);
+      
+      // If there's already an active signature, show the warning modal first
+      if (profile.signatureUrl) {
+        setSelectedImage(imageUrl);
+        setShowWarningModal(true);
+      } else {
+        // If no signature exists yet, just update the form state
+        setFormData({ ...formData, signatureUrl: imageUrl });
+      }
+    }
+    // Reset input value so the same file can be selected again if needed
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const triggerFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const confirmSignatureChange = () => {
+    setFormData({ ...formData, signatureUrl: selectedImage });
+    setShowWarningModal(false);
+  };
+
+  const cancelSignatureChange = () => {
+    setSelectedImage(null);
+    setShowWarningModal(false);
+  };
+
+  const removeSignature = () => {
+    setFormData({ ...formData, signatureUrl: null });
   };
 
   const handleUpdate = (e) => {
@@ -63,6 +108,17 @@ export default function AirportMaster() {
     if (formData.address !== profile.address) {
       newLogs.push({ id: Date.now() + 3, date: currentDate, time: currentTime, field: 'Registered Address', oldValue: profile.address, newValue: formData.address, user: 'Terminal Manager (Active)' });
     }
+    if (formData.signatureUrl !== profile.signatureUrl) {
+      newLogs.push({ 
+        id: Date.now() + 4, 
+        date: currentDate, 
+        time: currentTime, 
+        field: 'Manager Signature', 
+        oldValue: profile.signatureUrl ? '[Previous Image]' : '[None]', 
+        newValue: formData.signatureUrl ? '[New Image]' : '[Removed]', 
+        user: 'Terminal Manager (Active)' 
+      });
+    }
 
     if (newLogs.length === 0) {
       alert("No changes detected.");
@@ -81,10 +137,11 @@ export default function AirportMaster() {
   const isUnchanged = 
     formData.gstin === profile.gstin && 
     formData.email === profile.email && 
-    formData.address === profile.address;
+    formData.address === profile.address &&
+    formData.signatureUrl === profile.signatureUrl;
 
   return (
-    <div className="flex min-h-full w-full flex-col gap-6 font-sans pb-4">
+    <div className="flex min-h-full w-full flex-col gap-6 font-sans pb-4 relative">
       
       {/* HEADER CONTAINER */}
       <div className="relative p-6 flex flex-col sm:flex-row justify-between items-center gap-4 z-20">
@@ -96,7 +153,7 @@ export default function AirportMaster() {
         </div>
 
         <div className="relative">
-          <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">Airport Master</h2>
+          <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">Airport Settings</h2>
           <p className="text-sm text-slate-600 font-medium mt-1">Manage permanent airport billing details and track profile changes.</p>
         </div>
       </div>
@@ -163,13 +220,68 @@ export default function AirportMaster() {
                     name="address" 
                     value={formData.address} 
                     onChange={handleChange} 
-                    rows="4" 
+                    rows="3" 
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm font-bold focus:bg-white focus:border-[#007BFF] focus:ring-2 focus:ring-[#007BFF]/20 outline-none transition-all resize-none custom-scrollbar" 
                   ></textarea>
                 </div>
               </div>
 
-              <div className="pt-4 flex justify-end">
+              {/* TERMINAL MANAGER SIGNATURE UPLOAD */}
+              <div>
+                <label className="mb-1.5 block text-[13px] font-bold text-slate-700">Terminal Manager Signature</label>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleImageChange} 
+                  accept="image/png, image/jpeg, image/jpg" 
+                  className="hidden" 
+                />
+                
+                {!formData.signatureUrl ? (
+                  <div 
+                    onClick={triggerFileInput}
+                    className="w-full border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 hover:bg-slate-100 hover:border-[#007BFF]/50 transition-all cursor-pointer flex flex-col items-center justify-center py-6 gap-2"
+                  >
+                    <div className="h-10 w-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400">
+                      <Upload size={18} />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-slate-700">Click to upload signature</p>
+                      <p className="text-[11px] font-medium text-slate-500 mt-0.5">PNG, JPG up to 2MB</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-4 p-3 border border-slate-200 rounded-xl bg-slate-50">
+                    <div className="h-16 w-32 bg-white rounded-lg border border-slate-100 flex items-center justify-center overflow-hidden shrink-0">
+                      <img src={formData.signatureUrl} alt="Signature Preview" className="max-h-full max-w-full object-contain" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1.5 text-emerald-600 mb-1">
+                        <CheckCircle2 size={14} />
+                        <span className="text-[11px] font-bold uppercase tracking-wider">Signature Attached</span>
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <button 
+                          type="button"
+                          onClick={triggerFileInput}
+                          className="px-3 py-1.5 text-xs font-bold text-[#007BFF] bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                        >
+                          Change
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={removeSignature}
+                          className="px-3 py-1.5 text-xs font-bold text-rose-500 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-2 flex justify-end">
                 <button 
                   type="submit" 
                   disabled={isUnchanged}
@@ -252,6 +364,38 @@ export default function AirportMaster() {
         </div>
 
       </div>
+
+      {/* WARNING MODAL: Changing Signature */}
+      {showWarningModal && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm rounded-2xl">
+          <div className="bg-white rounded-2xl p-6 shadow-2xl w-80 max-w-[90%] transform transition-all border border-slate-100">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-rose-50 text-rose-500">
+              <ImageIcon size={24} />
+            </div>
+            <h3 className="text-lg font-extrabold text-slate-900 mb-2 text-center">Replace Signature?</h3>
+            <p className="text-[13px] text-slate-500 mb-6 leading-relaxed text-center">
+              An active signature is already uploaded. Are you sure you want to replace it with this new image?
+            </p>
+            <div className="flex gap-3">
+              <button 
+                type="button"
+                onClick={cancelSignatureChange}
+                className="flex-1 py-2.5 rounded-xl text-[13px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                onClick={confirmSignatureChange}
+                className="flex-1 py-2.5 rounded-xl text-[13px] font-bold text-white bg-rose-500 hover:bg-rose-600 shadow-md shadow-rose-500/20 transition-all"
+              >
+                Yes, Replace
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

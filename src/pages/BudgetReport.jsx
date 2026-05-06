@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { IndianRupee, FileText, Filter, Calendar, Download, Building, Wallet, ArrowDownToLine, TrendingUp, LayoutGrid } from 'lucide-react';
+import { IndianRupee, FileText, Filter, Calendar, Download, Building, Wallet, ArrowDownToLine, TrendingUp, LayoutGrid, CalendarDays } from 'lucide-react';
 
 // Utility to format currency
 const formatCurrency = (amount) => {
@@ -16,50 +16,81 @@ const reportData = {
   promisedAmount: 500000000, // 50 Cr
   receivedAmount: 250000000, // 25 Cr
   expenses: [
-    { id: 1, date: '2026-04-10', name: 'Infrastructure Maintenance', spent: 90000000, quarter: 'Q1', month: 'April 2026' },
-    { id: 2, date: '2026-04-15', name: 'Operational Growth', spent: 60000000, quarter: 'Q1', month: 'April 2026' },
-    { id: 3, date: '2026-07-20', name: 'Security & Surveillance', spent: 25000000, quarter: 'Q2', month: 'July 2026' },
-    { id: 4, date: '2026-10-22', name: 'Passenger Services', spent: 10000000, quarter: 'Q3', month: 'October 2026' },
-    { id: 5, date: '2027-01-05', name: 'IT Upgrades', spent: 5000000, quarter: 'Q4', month: 'January 2027' },
-    { id: 6, date: '2026-05-12', name: 'Infrastructure Maintenance', spent: 15000000, quarter: 'Q1', month: 'May 2026' }, // Added to show multiple entries per head
+    { id: 1, date: '2026-04-10', name: 'Infrastructure Maintenance', spent: 90000000, quarter: 'Q1', month: 'April 2026', financialYear: 'FY 2026-27' },
+    { id: 2, date: '2026-04-15', name: 'Operational Growth', spent: 60000000, quarter: 'Q1', month: 'April 2026', financialYear: 'FY 2026-27' },
+    { id: 3, date: '2026-07-20', name: 'Security & Surveillance', spent: 25000000, quarter: 'Q2', month: 'July 2026', financialYear: 'FY 2026-27' },
+    { id: 4, date: '2026-10-22', name: 'Passenger Services', spent: 10000000, quarter: 'Q3', month: 'October 2026', financialYear: 'FY 2026-27' },
+    { id: 5, date: '2027-01-05', name: 'IT Upgrades', spent: 5000000, quarter: 'Q4', month: 'January 2027', financialYear: 'FY 2026-27' },
+    { id: 6, date: '2026-05-12', name: 'Infrastructure Maintenance', spent: 15000000, quarter: 'Q1', month: 'May 2026', financialYear: 'FY 2026-27' },
+    { id: 7, date: '2025-11-10', name: 'IT Upgrades', spent: 8000000, quarter: 'Q3', month: 'November 2025', financialYear: 'FY 2025-26' }, // Older entry for testing Yearly filter
   ]
 };
 
 export default function BudgetReport() {
-  // Time Filter State
-  const [filter, setFilter] = useState('All');
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  // Dropdown Management State
+  const [openDropdown, setOpenDropdown] = useState(null); // 'head', 'timeMode', or 'subTime'
 
-  // Head Filter State
+  // Filter States
   const [headFilter, setHeadFilter] = useState('All Heads');
-  const [isHeadFilterOpen, setIsHeadFilterOpen] = useState(false);
+  const [timeMode, setTimeMode] = useState('All'); // 'All', 'Yearly', 'Quarterly', 'Monthly'
+  const [subTimeFilter, setSubTimeFilter] = useState('All'); 
 
-  // Extract unique head names dynamically from data
+  // Extract unique filter options dynamically from data
   const availableHeads = ['All Heads', ...new Set(reportData.expenses.map(e => e.name))];
+  const availableQuarters = [...new Set(reportData.expenses.map(e => e.quarter))].sort();
+  const availableMonths = [...new Set(reportData.expenses.map(e => e.month))];
+  const availableYears = [...new Set(reportData.expenses.map(e => e.financialYear))].sort();
+
+  const toggleDropdown = (dropdownName) => {
+    setOpenDropdown(openDropdown === dropdownName ? null : dropdownName);
+  };
+
+  const handleTimeModeChange = (mode) => {
+    setTimeMode(mode);
+    // Reset the secondary filter to its respective "All" option when primary changes
+    if (mode === 'Quarterly') setSubTimeFilter('All Quarters');
+    else if (mode === 'Monthly') setSubTimeFilter('All Months');
+    else if (mode === 'Yearly') setSubTimeFilter('All Years');
+    else setSubTimeFilter('All');
+    setOpenDropdown(null);
+  };
 
   // Calculate global totals
   const globalTotalSpent = reportData.expenses.reduce((acc, curr) => acc + curr.spent, 0);
   const remainingAmount = reportData.receivedAmount - globalTotalSpent;
 
-  // 1. Filter by Head
-  const filteredByHead = reportData.expenses.filter(expense => 
-    headFilter === 'All Heads' ? true : expense.name === headFilter
-  );
+  // 1. Filter the expenses based on selected Head AND specific Time constraints
+  const filteredExpenses = reportData.expenses.filter(expense => {
+    const matchHead = headFilter === 'All Heads' ? true : expense.name === headFilter;
+    
+    let matchTime = true;
+    if (timeMode === 'Quarterly' && subTimeFilter !== 'All Quarters') matchTime = expense.quarter === subTimeFilter;
+    if (timeMode === 'Monthly' && subTimeFilter !== 'All Months') matchTime = expense.month === subTimeFilter;
+    if (timeMode === 'Yearly' && subTimeFilter !== 'All Years') matchTime = expense.financialYear === subTimeFilter;
+    
+    return matchHead && matchTime;
+  });
 
-  // 2. Group by Time Filter (applied on the Head-filtered data)
-  const groupedExpenses = filteredByHead.reduce((acc, expense) => {
+  // 2. Group the filtered expenses for display
+  const groupedExpenses = filteredExpenses.reduce((acc, expense) => {
     let key = 'All Expenses';
-    if (filter === 'Monthly') key = expense.month;
-    if (filter === 'Quarterly') key = expense.quarter;
-    if (filter === 'Yearly') key = 'FY 2026-27'; // Simplified for mock data
+    if (timeMode === 'Monthly') key = expense.month;
+    if (timeMode === 'Quarterly') key = expense.quarter;
+    if (timeMode === 'Yearly') key = expense.financialYear;
 
     if (!acc[key]) acc[key] = [];
     acc[key].push(expense);
     return acc;
   }, {});
 
-  // Calculate the total spent for the CURRENTLY selected filter view
-  const currentViewTotalSpent = filteredByHead.reduce((acc, curr) => acc + curr.spent, 0);
+  // Calculate total spent for the CURRENTLY selected filter view
+  const currentViewTotalSpent = filteredExpenses.reduce((acc, curr) => acc + curr.spent, 0);
+
+  // Simulate downloading the specific report
+  const handleDownload = () => {
+    const timeString = timeMode === 'All' ? 'All Time' : `${timeMode} (${subTimeFilter})`;
+    alert(`Downloading PDF Report...\n\nFilters Applied:\n- Time Period: ${timeString}\n- Expense Head: ${headFilter}\n- Total Records: ${filteredExpenses.length}\n- Total Amount: ${formatCurrency(currentViewTotalSpent)}`);
+  };
 
   return (
     <div className="flex min-h-full w-full flex-col gap-6 font-sans pb-4">
@@ -78,7 +109,10 @@ export default function BudgetReport() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 rounded-xl bg-white/80 backdrop-blur-sm px-4 py-2 shadow-sm border border-slate-200 transition-all text-sm font-bold text-slate-700 hover:bg-white hover:text-[#007BFF] hover:border-[#007BFF]">
+          <button 
+            onClick={handleDownload}
+            className="flex items-center gap-2 rounded-xl bg-white/80 backdrop-blur-sm px-4 py-2 shadow-sm border border-slate-200 transition-all text-sm font-bold text-slate-700 hover:bg-white hover:text-[#007BFF] hover:border-[#007BFF]"
+          >
             <Download size={16} />
             <span className="hidden sm:inline">Export PDF</span>
           </button>
@@ -107,7 +141,7 @@ export default function BudgetReport() {
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 rounded-lg bg-rose-50 text-rose-500"><TrendingUp size={16} /></div>
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              {headFilter === 'All Heads' ? 'Total Spent' : 'Spent on Head'}
+              View Total Spent
             </p>
           </div>
           <h3 className="text-xl font-extrabold text-slate-900 text-rose-500">{formatCurrency(currentViewTotalSpent)}</h3>
@@ -116,7 +150,7 @@ export default function BudgetReport() {
         <div className="rounded-2xl bg-white border border-slate-100 p-5 shadow-sm flex flex-col justify-center">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 rounded-lg bg-indigo-50 text-indigo-500"><Building size={16} /></div>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Cash Remaining</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Overall Cash Remaining</p>
           </div>
           <h3 className="text-xl font-extrabold text-slate-900">{formatCurrency(remainingAmount)}</h3>
         </div>
@@ -126,7 +160,7 @@ export default function BudgetReport() {
       <div className="rounded-2xl bg-white border border-slate-100 shadow-xl flex flex-col flex-1 relative z-10 overflow-hidden">
         
         {/* Table Header & Controls */}
-        <div className="p-6 border-b border-slate-100 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-slate-50/50">
+        <div className="p-6 border-b border-slate-100 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-slate-50/50">
           <div className="flex items-center gap-2">
             <FileText size={18} className="text-[#007BFF]" />
             <h3 className="text-sm font-bold uppercase tracking-widest text-slate-800">Expenditure Ledger</h3>
@@ -135,22 +169,22 @@ export default function BudgetReport() {
           {/* Filters Container */}
           <div className="flex flex-wrap items-center gap-3">
             
-            {/* 1. HEAD FILTER DROPDOWN */}
+            {/* 1. HEAD FILTER */}
             <div className="relative">
               <button 
-                onClick={() => { setIsHeadFilterOpen(!isHeadFilterOpen); setIsFilterOpen(false); }}
+                onClick={() => toggleDropdown('head')}
                 className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 shadow-sm hover:border-[#007BFF] transition-colors"
               >
                 <LayoutGrid size={14} className="text-slate-400" />
                 Head: <span className="text-[#007BFF] truncate max-w-[150px]">{headFilter}</span>
               </button>
               
-              {isHeadFilterOpen && (
+              {openDropdown === 'head' && (
                 <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-100 shadow-lg rounded-xl overflow-hidden z-50 max-h-60 overflow-y-auto">
                   {availableHeads.map(h => (
                     <button
                       key={h}
-                      onClick={() => { setHeadFilter(h); setIsHeadFilterOpen(false); }}
+                      onClick={() => { setHeadFilter(h); setOpenDropdown(null); }}
                       className={`w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-blue-50 hover:text-[#007BFF] transition-colors truncate ${headFilter === h ? 'text-[#007BFF] bg-blue-50/50' : 'text-slate-600'}`}
                     >
                       {h}
@@ -160,30 +194,80 @@ export default function BudgetReport() {
               )}
             </div>
 
-            {/* 2. TIME FILTER DROPDOWN */}
+            {/* 2. PRIMARY TIME FILTER (Mode) */}
             <div className="relative">
               <button 
-                onClick={() => { setIsFilterOpen(!isFilterOpen); setIsHeadFilterOpen(false); }}
+                onClick={() => toggleDropdown('timeMode')}
                 className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 shadow-sm hover:border-[#007BFF] transition-colors"
               >
                 <Filter size={14} className="text-slate-400" />
-                Time: <span className="text-[#007BFF]">{filter}</span>
+                View: <span className="text-[#007BFF] truncate max-w-[120px]">{timeMode}</span>
               </button>
               
-              {isFilterOpen && (
+              {openDropdown === 'timeMode' && (
                 <div className="absolute right-0 mt-2 w-40 bg-white border border-slate-100 shadow-lg rounded-xl overflow-hidden z-50">
-                  {['All', 'Monthly', 'Quarterly', 'Yearly'].map(f => (
+                  {['All', 'Yearly', 'Quarterly', 'Monthly'].map(mode => (
                     <button
-                      key={f}
-                      onClick={() => { setFilter(f); setIsFilterOpen(false); }}
-                      className={`w-full text-left px-4 py-2 text-sm font-semibold hover:bg-blue-50 hover:text-[#007BFF] transition-colors ${filter === f ? 'text-[#007BFF] bg-blue-50/50' : 'text-slate-600'}`}
+                      key={mode}
+                      onClick={() => handleTimeModeChange(mode)}
+                      className={`w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-blue-50 hover:text-[#007BFF] transition-colors ${timeMode === mode ? 'text-[#007BFF] bg-blue-50/50' : 'text-slate-600'}`}
                     >
-                      {f} View
+                      {mode}
                     </button>
                   ))}
                 </div>
               )}
             </div>
+
+            {/* 3. SECONDARY TIME FILTER (Conditional based on mode) */}
+            {timeMode !== 'All' && (
+              <div className="relative animate-in fade-in slide-in-from-left-2 duration-300">
+                <button 
+                  onClick={() => toggleDropdown('subTime')}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-[#007BFF]/30 rounded-xl text-sm font-bold text-[#007BFF] shadow-sm hover:border-[#007BFF] bg-blue-50/50 transition-colors"
+                >
+                  <CalendarDays size={14} className="text-[#007BFF]" />
+                  <span className="truncate max-w-[150px]">{subTimeFilter}</span>
+                </button>
+                
+                {openDropdown === 'subTime' && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-100 shadow-lg rounded-xl overflow-hidden z-50 max-h-60 overflow-y-auto">
+                    
+                    {/* Render Options based on Time Mode */}
+                    {timeMode === 'Quarterly' && ['All Quarters', ...availableQuarters].map(q => (
+                      <button
+                        key={q}
+                        onClick={() => { setSubTimeFilter(q); setOpenDropdown(null); }}
+                        className={`w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-blue-50 hover:text-[#007BFF] transition-colors ${subTimeFilter === q ? 'text-[#007BFF] bg-blue-50/50' : 'text-slate-600'}`}
+                      >
+                        {q}
+                      </button>
+                    ))}
+
+                    {timeMode === 'Monthly' && ['All Months', ...availableMonths].map(m => (
+                      <button
+                        key={m}
+                        onClick={() => { setSubTimeFilter(m); setOpenDropdown(null); }}
+                        className={`w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-blue-50 hover:text-[#007BFF] transition-colors ${subTimeFilter === m ? 'text-[#007BFF] bg-blue-50/50' : 'text-slate-600'}`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+
+                    {timeMode === 'Yearly' && ['All Years', ...availableYears].map(y => (
+                      <button
+                        key={y}
+                        onClick={() => { setSubTimeFilter(y); setOpenDropdown(null); }}
+                        className={`w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-blue-50 hover:text-[#007BFF] transition-colors ${subTimeFilter === y ? 'text-[#007BFF] bg-blue-50/50' : 'text-slate-600'}`}
+                      >
+                        {y}
+                      </button>
+                    ))}
+
+                  </div>
+                )}
+              </div>
+            )}
 
           </div>
         </div>
@@ -197,7 +281,7 @@ export default function BudgetReport() {
           ) : (
             Object.entries(groupedExpenses).map(([groupName, expenses]) => (
               <div key={groupName} className="mb-8 last:mb-0">
-                {filter !== 'All' && (
+                {timeMode !== 'All' && (
                   <div className="flex items-center gap-2 mb-4 text-[#007BFF] bg-blue-50 py-1.5 px-3 rounded-lg inline-flex">
                     <Calendar size={14} />
                     <span className="text-xs font-extrabold uppercase tracking-widest">{groupName}</span>
@@ -207,9 +291,9 @@ export default function BudgetReport() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b-2 border-slate-100">
-                      <th className="pb-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-2">Date</th>
-                      <th className="pb-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Expense Head</th>
-                      <th className="pb-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right pr-2">Amount Spent</th>
+                      <th className="pb-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-2 w-1/4">Date</th>
+                      <th className="pb-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider w-1/2">Expense Head</th>
+                      <th className="pb-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right pr-2 w-1/4">Amount Spent</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -226,8 +310,9 @@ export default function BudgetReport() {
                         </td>
                       </tr>
                     ))}
+                    
                     {/* Subtotal row for grouped views */}
-                    {filter !== 'All' && (
+                    {timeMode !== 'All' && (
                       <tr className="bg-slate-50/80">
                         <td colSpan="2" className="py-3 pl-2 text-right text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                           {groupName} Subtotal:

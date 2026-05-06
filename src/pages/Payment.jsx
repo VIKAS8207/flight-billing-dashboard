@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, Send, FileDown, ChevronDown, ChevronLeft, ChevronRight, Plane } from 'lucide-react';
+import { Search, Filter, Send, FileDown, ChevronDown, ChevronLeft, ChevronRight, Plane, Building } from 'lucide-react';
 
 // Utility to format currency
 const formatCurrency = (amount) => {
@@ -36,9 +36,18 @@ export default function Payment() {
   const [filterType, setFilterType] = useState('All');
   const [isTypeFilterOpen, setIsTypeFilterOpen] = useState(false);
 
+  // New Airline Sub-Filter States
+  const [filterAirline, setFilterAirline] = useState('All');
+  const [isAirlineFilterOpen, setIsAirlineFilterOpen] = useState(false);
+
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
+
+  // Derive available airlines dynamically based on the selected Flight Type
+  const availableAirlines = filterType === 'All' 
+    ? [] 
+    : [...new Set(invoices.filter(inv => inv.type === filterType).map(inv => inv.airline))].sort();
 
   // Filter Logic
   const filteredInvoices = invoices.filter(inv => {
@@ -47,7 +56,9 @@ export default function Payment() {
                           inv.flightNo.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'All' || inv.status === filterStatus;
     const matchesType = filterType === 'All' || inv.type === filterType;
-    return matchesSearch && matchesStatus && matchesType;
+    const matchesAirline = filterAirline === 'All' || inv.airline === filterAirline;
+    
+    return matchesSearch && matchesStatus && matchesType && matchesAirline;
   });
 
   // Pagination Logic
@@ -72,7 +83,14 @@ export default function Payment() {
 
   const handleSelectType = (type) => {
     setFilterType(type);
+    setFilterAirline('All'); // Reset airline filter when parent type changes
     setIsTypeFilterOpen(false);
+    setCurrentPage(1);
+  };
+
+  const handleSelectAirline = (airline) => {
+    setFilterAirline(airline);
+    setIsAirlineFilterOpen(false);
     setCurrentPage(1);
   };
 
@@ -120,10 +138,11 @@ export default function Payment() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Flight Type Filter */}
+            
+            {/* 1. Flight Type Filter */}
             <div className="relative">
               <button 
-                onClick={() => { setIsTypeFilterOpen(!isTypeFilterOpen); setIsFilterOpen(false); }}
+                onClick={() => { setIsTypeFilterOpen(!isTypeFilterOpen); setIsFilterOpen(false); setIsAirlineFilterOpen(false); }}
                 className="flex items-center gap-2 h-11 px-5 rounded-2xl bg-gradient-to-r from-[#007BFF] to-[#409cff] text-white font-bold shadow-md shadow-[#007BFF]/20 hover:shadow-lg hover:scale-[1.02] transition-all"
               >
                 <Plane size={16} className="opacity-90" />
@@ -150,10 +169,53 @@ export default function Payment() {
               </div>
             </div>
 
-            {/* Status Filter */}
+            {/* 2. CONDITIONAL Airline Filter (Appears only if Public or Private is selected) */}
+            {filterType !== 'All' && (
+              <div className="relative animate-in fade-in slide-in-from-left-2 duration-300">
+                <button 
+                  onClick={() => { setIsAirlineFilterOpen(!isAirlineFilterOpen); setIsTypeFilterOpen(false); setIsFilterOpen(false); }}
+                  className="flex items-center gap-2 h-11 px-5 rounded-2xl bg-white border border-[#007BFF]/30 text-[#007BFF] font-bold shadow-sm hover:shadow-md hover:bg-blue-50 transition-all"
+                >
+                  <Building size={16} className="opacity-90" />
+                  <span className="text-[13px] tracking-wide whitespace-nowrap max-w-[120px] truncate">
+                    {filterAirline === 'All' ? 'All Airlines' : filterAirline}
+                  </span>
+                  <ChevronDown size={16} className={`ml-1 opacity-90 transition-transform duration-300 ${isAirlineFilterOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                <div className={`absolute right-0 lg:left-0 top-full mt-2 w-52 rounded-2xl bg-white shadow-xl shadow-[#007BFF]/10 py-2 border border-slate-100 overflow-hidden transform origin-top transition-all duration-200 z-50 ${isAirlineFilterOpen ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}`}>
+                  <button
+                    onClick={() => handleSelectAirline('All')}
+                    className={`w-full text-left px-5 py-2.5 text-[13px] font-bold transition-colors ${
+                      filterAirline === 'All' 
+                        ? 'bg-[#007BFF]/10 text-[#007BFF]' 
+                        : 'text-slate-600 hover:bg-[#007BFF]/5 hover:text-[#007BFF]'
+                    }`}
+                  >
+                    All Airlines
+                  </button>
+                  {availableAirlines.map((airline) => (
+                    <button
+                      key={airline}
+                      onClick={() => handleSelectAirline(airline)}
+                      className={`w-full text-left px-5 py-2.5 text-[13px] font-bold transition-colors truncate ${
+                        filterAirline === airline 
+                          ? 'bg-[#007BFF]/10 text-[#007BFF]' 
+                          : 'text-slate-600 hover:bg-[#007BFF]/5 hover:text-[#007BFF]'
+                      }`}
+                      title={airline}
+                    >
+                      {airline}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 3. Status Filter */}
             <div className="relative">
               <button 
-                onClick={() => { setIsFilterOpen(!isFilterOpen); setIsTypeFilterOpen(false); }}
+                onClick={() => { setIsFilterOpen(!isFilterOpen); setIsTypeFilterOpen(false); setIsAirlineFilterOpen(false); }}
                 className="flex items-center gap-2 h-11 px-5 rounded-2xl bg-gradient-to-r from-[#007BFF] to-[#409cff] text-white font-bold shadow-md shadow-[#007BFF]/20 hover:shadow-lg hover:scale-[1.02] transition-all"
               >
                 <Filter size={16} className="opacity-90" />
