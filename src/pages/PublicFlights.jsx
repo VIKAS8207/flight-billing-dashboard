@@ -244,7 +244,7 @@ export default function PublicFlights() {
 
               {/* TABS */}
               <div className="mb-6 flex gap-4 max-w-md">
-                <button onClick={() => { setActiveTab('parking'); setSelectedMonths([]); setMonthRecords({}); }} className={`w-full rounded-lg py-3 text-sm font-bold transition-all ${activeTab === 'parking' ? 'bg-[#3B82F6] text-white shadow-md shadow-blue-500/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Parking Invoice</button>
+                <button onClick={() => { setActiveTab('parking'); setSelectedMonths([]); setMonthRecords({}); }} className={`w-full rounded-lg py-3 text-sm font-bold transition-all ${activeTab === 'parking' ? 'bg-[#3B82F6] text-white shadow-md shadow-blue-500/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Invoice Value</button>
                 <button onClick={() => { setActiveTab('udf'); setSelectedMonths([]); setMonthRecords({}); }} className={`w-full rounded-lg py-3 text-sm font-bold transition-all ${activeTab === 'udf' ? 'bg-[#3B82F6] text-white shadow-md shadow-blue-500/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>UDF Invoice</button>
               </div>
 
