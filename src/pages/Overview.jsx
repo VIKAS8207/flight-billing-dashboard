@@ -145,7 +145,7 @@ export default function Overview() {
               badgeColor="bg-emerald-50 text-emerald-600 border border-emerald-100"
             />
             <LightStatCard 
-              title="" 
+              title="Waiting Hour Charges" 
               value="₹84,500" 
               badge="+4%" 
               subtext="Watch & overstay charges" 
@@ -258,7 +258,7 @@ export default function Overview() {
               badgeColor="bg-emerald-50 text-emerald-600 border border-emerald-100"
             />
             <LightStatCard 
-              title="Waiting Hours Charge" 
+              title="Waiting Hour Charges" 
               value="₹1,24,000" 
               badge="+9%" 
               subtext="Watch & extensions" 
