@@ -1,13 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, Plus, Calendar, Clock } from 'lucide-react';
+import { 
+  ChevronDown, Plus, Calendar, Clock, X, Download, Trash2, CheckCircle2,
+  ReceiptIndianRupee, Plane, FileSignature
+} from 'lucide-react';
 
-// Utility to format numbers to Indian Rupee standard (e.g., 1,00,000)
+// Utility to format numbers
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
 };
 
-// Simplified Number to Words converter for the invoice requirement
+// Date formatter
+const formatDateTimeStr = (dateStr, timeStr) => {
+  if (!dateStr || !timeStr) return '';
+  const date = new Date(`${dateStr}T${timeStr}`);
+  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + 
+         date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+};
+
+// Number to Words
 const numberToWords = (num) => {
   if (num === 0) return 'ZERO ONLY';
   const a = ['', 'ONE ', 'TWO ', 'THREE ', 'FOUR ', 'FIVE ', 'SIX ', 'SEVEN ', 'EIGHT ', 'NINE ', 'TEN ', 'ELEVEN ', 'TWELVE ', 'THIRTEEN ', 'FOURTEEN ', 'FIFTEEN ', 'SIXTEEN ', 'SEVENTEEN ', 'EIGHTEEN ', 'NINETEEN '];
@@ -22,30 +33,23 @@ const numberToWords = (num) => {
   return 'RUPEES ' + convert(num).trim() + ' ONLY';
 };
 
+const ALL_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const AIRLINE_OPTIONS = ['M/s Alliance Air Aviation Limited', 'M/s IndiGo Airlines', 'M/s Air India', 'M/s Vistara', 'M/s SpiceJet'];
+
 export default function PublicFlights() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('parking');
   
-  // Custom Dropdown State
+  // Global Airline State
+  const [airline, setAirline] = useState('');
   const [isAirlineOpen, setIsAirlineOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Form States
-  const [airline, setAirline] = useState('');
-  const [flightName, setFlightName] = useState('');
-  
-  // Separated Date and Time states for better UI
-  const [arrivalDate, setArrivalDate] = useState('');
-  const [arrivalTime, setArrivalTime] = useState('');
-  const [departureDate, setDepartureDate] = useState('');
-  const [departureTime, setDepartureTime] = useState('');
-  
-  const [passengers, setPassengers] = useState('');
+  // Dynamic State for Months & Records
+  const [selectedMonths, setSelectedMonths] = useState([]);
+  const [monthRecords, setMonthRecords] = useState({});
 
-  // Signature Mock State 
   const [signatureUrl, setSignatureUrl] = useState(null); 
-  
-  // Invoice Data State
   const [invoiceData, setInvoiceData] = useState(null);
 
   // Close dropdown on outside click
@@ -59,525 +63,519 @@ export default function PublicFlights() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const airlineOptions = [
-    'M/s Alliance Air Aviation Limited',
-    'M/s IndiGo Airlines',
-    'M/s Air India',
-    'M/s Vistara',
-    'M/s SpiceJet'
-  ];
-
-  const handleGenerate = () => {
-    if (!airline || !flightName) return alert('Please select Airline and Flight.');
-
-    if (activeTab === 'parking') {
-      if (!arrivalDate || !arrivalTime || !departureDate || !departureTime) 
-        return alert('Please enter complete Arrival and Departure dates and times.');
-
-      const arrival = new Date(`${arrivalDate}T${arrivalTime}`);
-      const departure = new Date(`${departureDate}T${departureTime}`);
-      
-      const diffMs = departure - arrival;
-      if (diffMs < 0) return alert('Departure cannot be before Arrival.');
-      
-      const totalHours = Math.ceil(diffMs / (1000 * 60 * 60));
-      const billableHours = Math.max(0, totalHours - 2);
-      
-      const hourlyRate = 5000;
-      const amount = billableHours * hourlyRate;
-      
-      const cgst = amount * 0.09;
-      const sgst = amount * 0.09;
-      const igst = amount * 0.18; // Added 18% IGST
-      const total = amount + cgst + sgst + igst;
-
-      const formatDateTime = (d) => {
-        return d.toLocaleDateString('en-IN') + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-      };
-
-      setInvoiceData({
-        type: 'Parking',
-        airline,
-        flightName,
-        arrivalStr: formatDateTime(arrival),
-        departureStr: formatDateTime(departure),
-        totalHours,
-        billableHours,
-        rate: hourlyRate,
-        amount,
-        cgst,
-        sgst,
-        igst,
-        total,
-        invoiceDate: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-      });
+  // --- Step 1: Month Selection Logic ---
+  const toggleMonth = (month) => {
+    if (selectedMonths.includes(month)) {
+      setSelectedMonths(selectedMonths.filter(m => m !== month));
     } else {
-      if (!arrivalDate || !passengers) return alert('Please enter Arrival Date and Number of Passengers.');
-
-      const arrival = new Date(arrivalDate);
-      const passengerCount = parseInt(passengers, 10);
-
-      if (isNaN(passengerCount) || passengerCount <= 0) return alert('Please enter a valid passenger count.');
-
-      const passengerRate = 200;
-      const amount = passengerCount * passengerRate;
-      
-      const cgst = amount * 0.09;
-      const sgst = amount * 0.09;
-      const igst = amount * 0.18; // Added 18% IGST
-      const total = amount + cgst + sgst + igst;
-
-      setInvoiceData({
-        type: 'UDF',
-        airline,
-        flightName,
-        arrivalStr: arrival.toLocaleDateString('en-IN'),
-        passengerCount,
-        rate: passengerRate,
-        amount,
-        cgst,
-        sgst,
-        igst,
-        total,
-        invoiceDate: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-      });
+      setSelectedMonths([...selectedMonths, month]);
+      if (!monthRecords[month]) {
+        setMonthRecords(prev => ({
+          ...prev, 
+          [month]: [{ 
+            id: Date.now() + Math.random(), flightName: '', 
+            arrivalDate: '', arrivalTime: '', departureDate: '', departureTime: '', passengers: '' 
+          }]
+        }));
+      }
     }
+  };
+
+  // --- Step 2: Flight Entry Handlers ---
+  const handleAddEntry = (month) => {
+    setMonthRecords(prev => ({
+      ...prev,
+      [month]: [...prev[month], { 
+        id: Date.now() + Math.random(), flightName: '', 
+        arrivalDate: '', arrivalTime: '', departureDate: '', departureTime: '', passengers: '' 
+      }]
+    }));
+  };
+
+  const handleRemoveEntry = (month, entryId) => {
+    if (monthRecords[month].length > 1) {
+      setMonthRecords(prev => ({
+        ...prev,
+        [month]: prev[month].filter(e => e.id !== entryId)
+      }));
+    }
+  };
+
+  const updateEntry = (month, entryId, field, value) => {
+    setMonthRecords(prev => ({
+      ...prev,
+      [month]: prev[month].map(e => e.id === entryId ? { ...e, [field]: value } : e)
+    }));
+  };
+
+  // --- Step 3: Generation Logic ---
+  const handleGenerate = () => {
+    if (!airline) return alert('Please select an Airline Company first.');
+    if (selectedMonths.length === 0) return alert('Please select at least one month to bill.');
+
+    let processedMonths = [];
+    let grandTotalAmount = 0;
+
+    for (const month of selectedMonths) {
+      let monthFlights = [];
+      let monthSubTotal = 0;
+
+      for (let i = 0; i < monthRecords[month].length; i++) {
+        const entry = monthRecords[month][i];
+
+        if (!entry.flightName) {
+          return alert(`Please enter a Flight Name/Number for ${month} - Record #${i + 1}`);
+        }
+
+        if (activeTab === 'parking') {
+          if (!entry.arrivalDate || !entry.arrivalTime || !entry.departureDate || !entry.departureTime) 
+            return alert(`Please complete all dates/times for ${month} - Record #${i + 1}`);
+
+          const arrival = new Date(`${entry.arrivalDate}T${entry.arrivalTime}`);
+          const departure = new Date(`${entry.departureDate}T${entry.departureTime}`);
+          
+          if (departure - arrival < 0) return alert(`Departure cannot be before Arrival in ${month} - Record #${i + 1}`);
+          
+          const totalHours = Math.ceil((departure - arrival) / (1000 * 60 * 60));
+          const billableHours = Math.max(0, totalHours - 2);
+          const hourlyRate = 5000;
+          const amount = billableHours * hourlyRate;
+
+          monthFlights.push({
+            ...entry,
+            arrivalStr: formatDateTimeStr(entry.arrivalDate, entry.arrivalTime),
+            departureStr: formatDateTimeStr(entry.departureDate, entry.departureTime),
+            totalHours,
+            billableHours,
+            rate: hourlyRate,
+            amount
+          });
+          monthSubTotal += amount;
+
+        } else {
+          if (!entry.arrivalDate || !entry.arrivalTime || !entry.departureDate || !entry.departureTime || !entry.passengers) 
+            return alert(`Please complete all details and passengers for ${month} - Record #${i + 1}`);
+
+          const arrival = new Date(`${entry.arrivalDate}T${entry.arrivalTime}`);
+          const departure = new Date(`${entry.departureDate}T${entry.departureTime}`);
+          if (departure - arrival < 0) return alert(`Departure cannot be before Arrival in ${month} - Record #${i + 1}`);
+
+          const passengerCount = parseInt(entry.passengers, 10);
+          if (isNaN(passengerCount) || passengerCount <= 0) return alert(`Invalid passenger count in ${month} - Record #${i + 1}`);
+
+          const passengerRate = 200;
+          const amount = passengerCount * passengerRate;
+
+          monthFlights.push({
+            ...entry,
+            arrivalStr: formatDateTimeStr(entry.arrivalDate, entry.arrivalTime),
+            departureStr: formatDateTimeStr(entry.departureDate, entry.departureTime),
+            passengerCount,
+            rate: passengerRate,
+            amount
+          });
+          monthSubTotal += amount;
+        }
+      }
+
+      processedMonths.push({
+        monthName: month,
+        flights: monthFlights,
+        monthTotal: monthSubTotal
+      });
+      grandTotalAmount += monthSubTotal;
+    }
+
+    const cgst = grandTotalAmount * 0.09;
+    const sgst = grandTotalAmount * 0.09;
+    const igst = grandTotalAmount * 0.18;
+    const grandTotal = grandTotalAmount + cgst + sgst + igst;
+
+    setInvoiceData({
+      type: activeTab === 'parking' ? 'Parking' : 'UDF',
+      airline,
+      processedMonths,
+      subTotal: grandTotalAmount,
+      cgst,
+      sgst,
+      igst,
+      total: grandTotal,
+      invoiceDate: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    });
   };
 
   const resetForm = () => {
     setAirline('');
-    setFlightName('');
-    setArrivalDate('');
-    setArrivalTime('');
-    setDepartureDate('');
-    setDepartureTime('');
-    setPassengers('');
+    setSelectedMonths([]);
+    setMonthRecords({});
     setInvoiceData(null);
   };
 
-  const handleBack = () => {
-    setInvoiceData(null); 
-  };
-
-  const handleSave = () => {
-    alert("Invoice saved successfully!");
-    resetForm();
-  };
-
-  const handleSaveAndSend = () => {
-    alert("Invoice saved and sent successfully!");
-    resetForm();
-  };
-
   return (
-    <div className="flex h-full w-full gap-6 text-slate-900 overflow-hidden font-sans">
+    <div className="flex min-h-screen w-full text-slate-900 font-sans p-6 justify-center bg-transparent">
       
-      {/* --- LEFT COLUMN: Form Area --- */}
-      <div className="flex w-[45%] min-w-[400px] flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar">
+      <div className="w-full flex flex-col items-center gap-6">
         
-        {/* Styled Banner */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#1E40AF] to-[#3B82F6] p-8 text-white shadow-lg flex flex-col justify-center min-h-[140px]">
-          <div 
-            className="absolute inset-y-0 right-0 w-2/3 md:w-1/2 pointer-events-none z-0"
-            style={{ 
-              maskImage: 'linear-gradient(to right, transparent, black 60%)', 
-              WebkitMaskImage: '-webkit-linear-gradient(left, transparent, black 60%)' 
-            }}
-          >
-            <img 
-              src="/image/plane.png" 
-              alt="Decorative Background" 
-              className="h-full w-full object-cover object-right opacity-50 mix-blend-overlay"
-              onError={(e) => e.target.style.display = 'none'}
-            />
-          </div>
-
-          <div className="relative z-10 flex flex-col items-start">
-            <h2 className="text-3xl font-bold tracking-tight leading-none">Public Invoices</h2>
-            <div className="mt-3 flex items-center gap-4 text-sm font-medium text-white/90">
-              <span className="flex items-center gap-1.5">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> 
-                Commercial Airlines
-              </span>
-              <span className="flex items-center gap-1.5">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg> 
-                Auto-Calculate
-              </span>
+        {!invoiceData ? (
+          // ==========================================
+          // 1. FORM VIEW (Dynamic Builder)
+          // ==========================================
+          <div className="animate-in fade-in zoom-in-[0.99] duration-300 ease-out w-full max-w-4xl flex flex-col gap-6">
+            
+            {/* Styled Banner */}
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#1E40AF] to-[#3B82F6] p-8 text-white shadow-lg flex flex-col justify-center min-h-[140px]">
+              <div className="absolute inset-y-0 right-0 w-2/3 md:w-1/2 pointer-events-none z-0" style={{ maskImage: 'linear-gradient(to right, transparent, black 60%)', WebkitMaskImage: '-webkit-linear-gradient(left, transparent, black 60%)' }}>
+                <img src="/image/plane.png" alt="Decorative Background" className="h-full w-full object-cover object-right opacity-50 mix-blend-overlay" onError={(e) => e.target.style.display = 'none'} />
+              </div>
+              <div className="relative z-10 flex flex-col items-start">
+                <h2 className="text-3xl font-bold tracking-tight leading-none">Flight Billing Maker</h2>
+                <p className="mt-2 text-sm text-blue-100">Select an airline, billing months, and build flight logs.</p>
+              </div>
             </div>
-          </div>
 
-          {/* Abstract background elements */}
-          <div className="absolute -right-4 -top-10 h-32 w-32 rounded-full bg-white/10 blur-2xl z-0"></div>
-          <div className="absolute -bottom-10 right-10 h-24 w-24 rounded-full bg-white/10 blur-xl z-0"></div>
-        </div>
-
-        {/* Input Form Card */}
-        <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-xl mb-4">
-          
-          <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-4">
-            <div className="flex items-center gap-2 text-slate-700 font-bold">
-              <svg className="h-5 w-5 text-[#3B82F6]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" /></svg>
-              Flight Detail
-            </div>
-            {invoiceData && <span className="rounded-full bg-green-100 px-3 py-1 text-[10px] font-bold text-green-700 uppercase tracking-wider">Completed</span>}
-          </div>
-
-          {/* TABS */}
-          <div className="mb-6 flex gap-2">
-            <button onClick={() => { setActiveTab('parking'); setInvoiceData(null); }} className={`w-full rounded-lg py-2.5 text-sm font-bold transition-all ${activeTab === 'parking' ? 'bg-[#3B82F6] text-white shadow-md shadow-blue-500/20' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>Parking Invoice</button>
-            <button onClick={() => { setActiveTab('udf'); setInvoiceData(null); }} className={`w-full rounded-lg py-2.5 text-sm font-bold transition-all ${activeTab === 'udf' ? 'bg-[#3B82F6] text-white shadow-md shadow-blue-500/20' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>UDF Invoice</button>
-          </div>
-
-          <form className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
+            {/* CONFIGURATION CARD */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-xl">
               
-              {/* CUSTOM AIRLINE DROPDOWN */}
-              <div className="relative" ref={dropdownRef}>
-                <label className="mb-1.5 block text-xs font-bold text-slate-700">Airlines Company <span className="text-red-500">*</span></label>
+              <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-2 text-lg text-slate-800 font-bold">
+                  <ReceiptIndianRupee className="h-6 w-6 text-[#3B82F6]" /> Invoice Configuration
+                </div>
+              </div>
+
+              {/* TABS */}
+              <div className="mb-6 flex gap-4 max-w-md">
+                <button onClick={() => { setActiveTab('parking'); setSelectedMonths([]); setMonthRecords({}); }} className={`w-full rounded-lg py-3 text-sm font-bold transition-all ${activeTab === 'parking' ? 'bg-[#3B82F6] text-white shadow-md shadow-blue-500/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Parking Invoice</button>
+                <button onClick={() => { setActiveTab('udf'); setSelectedMonths([]); setMonthRecords({}); }} className={`w-full rounded-lg py-3 text-sm font-bold transition-all ${activeTab === 'udf' ? 'bg-[#3B82F6] text-white shadow-md shadow-blue-500/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>UDF Invoice</button>
+              </div>
+
+              {/* GLOBAL AIRLINE DROPDOWN */}
+              <div className="mb-8 relative max-w-md" ref={dropdownRef}>
+                <label className="mb-2 block text-sm font-bold text-slate-700">Airlines Company <span className="text-red-500">*</span></label>
                 <div 
-                  onClick={() => setIsAirlineOpen(!isAirlineOpen)}
-                  className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 transition-colors hover:bg-white focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                  onClick={() => setIsAirlineOpen(!isAirlineOpen)} 
+                  className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-800 hover:border-[#3B82F6] transition-colors"
                 >
-                  <span className={airline ? "text-slate-900" : "text-slate-400"}>
+                  <span className={airline ? "text-slate-900 font-medium" : "text-slate-400"}>
                     {airline || 'Select Airline...'}
                   </span>
-                  <ChevronDown size={16} className={`text-slate-400 transition-transform ${isAirlineOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={18} className={`text-slate-400 transition-transform ${isAirlineOpen ? 'rotate-180' : ''}`} />
                 </div>
-
                 {isAirlineOpen && (
-                  <div className="absolute top-full left-0 z-50 mt-2 w-full rounded-[10px] bg-white shadow-xl py-2 flex flex-col border-none overflow-hidden">
-                    <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                      {airlineOptions.map((opt, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => {
-                            setAirline(opt);
-                            setIsAirlineOpen(false);
-                          }}
-                          className="w-full px-4 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                  <div className="absolute top-full left-0 z-50 mt-1 w-full rounded-xl bg-white shadow-xl py-2 flex flex-col border border-slate-100">
+                    <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                      {AIRLINE_OPTIONS.map((opt, idx) => (
+                        <button 
+                          key={idx} type="button" 
+                          onClick={() => { setAirline(opt); setIsAirlineOpen(false); }} 
+                          className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-blue-50"
                         >
                           {opt}
                         </button>
                       ))}
                     </div>
-                    {/* Add Flight Link inside Dropdown */}
-                    <div className="border-t border-slate-100 mt-1 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsAirlineOpen(false);
-                          navigate('/flight-master');
-                        }}
-                        className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-bold text-[#3B82F6] hover:bg-blue-50 transition-colors"
-                      >
-                        <Plus size={16} /> Add Flight
-                      </button>
-                    </div>
                   </div>
                 )}
               </div>
 
-              <div>
-                <label className="mb-1.5 block text-xs font-bold text-slate-700">Flight Name / Number <span className="text-red-500">*</span></label>
-                <input value={flightName} onChange={(e) => setFlightName(e.target.value)} type="text" placeholder="e.g. 6E-201" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 transition-colors focus:border-[#3B82F6] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3B82F6]" />
+              {/* MONTH SELECTOR */}
+              <div className="mb-4 flex items-center gap-2 text-lg text-slate-800 font-bold border-b border-slate-100 pb-4">
+                <Calendar className="h-5 w-5 text-[#3B82F6]" /> Select Billing Months
+              </div>
+              
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-2">
+                {ALL_MONTHS.map(month => {
+                  const isSelected = selectedMonths.includes(month);
+                  return (
+                    <button
+                      key={month}
+                      onClick={() => toggleMonth(month)}
+                      className={`relative flex items-center justify-center py-2.5 rounded-lg text-sm font-bold transition-all border ${
+                        isSelected 
+                          ? 'bg-blue-50 border-[#3B82F6] text-[#3B82F6] shadow-sm' 
+                          : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      {isSelected && <CheckCircle2 size={14} className="absolute left-2" />}
+                      {month}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* CONDITIONAL FIELDS BASED ON TAB */}
-            {activeTab === 'parking' ? (
-              <div className="space-y-4">
-                {/* Arrival Block */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-slate-700">Arrival Details <span className="text-red-500">*</span></label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-                        <Calendar size={14} />
-                      </div>
-                      <input value={arrivalDate} onChange={(e) => setArrivalDate(e.target.value)} type="date" className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 py-2.5 text-sm text-slate-800 transition-colors focus:border-[#3B82F6] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3B82F6]" />
+            {/* DYNAMIC MONTH CONTAINERS */}
+            {selectedMonths.length > 0 && (
+              <div className="space-y-8 animate-in fade-in duration-300 mt-2">
+                {selectedMonths.map(month => (
+                  <div key={month} className="rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden">
+                    
+                    {/* Month Header */}
+                    <div className="bg-slate-50 px-8 py-5 border-b border-slate-200 flex justify-between items-center">
+                      <h3 className="text-xl font-extrabold text-slate-800">{month} Operations</h3>
+                      <span className="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full">{monthRecords[month].length} Flights</span>
                     </div>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-                        <Clock size={14} />
-                      </div>
-                      <input value={arrivalTime} onChange={(e) => setArrivalTime(e.target.value)} type="time" className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 py-2.5 text-sm text-slate-800 transition-colors focus:border-[#3B82F6] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3B82F6]" />
-                    </div>
-                  </div>
-                </div>
 
-                {/* Departure Block */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-slate-700">Departure Details <span className="text-red-500">*</span></label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-                        <Calendar size={14} />
-                      </div>
-                      <input value={departureDate} onChange={(e) => setDepartureDate(e.target.value)} type="date" className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 py-2.5 text-sm text-slate-800 transition-colors focus:border-[#3B82F6] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3B82F6]" />
+                    <div className="p-8 space-y-8">
+                      {monthRecords[month].map((entry, index) => (
+                        <div key={entry.id} className="relative p-6 rounded-xl border border-slate-200 bg-slate-50/50 shadow-sm transition-all hover:border-slate-300">
+                          
+                          {monthRecords[month].length > 1 && (
+                            <button onClick={() => handleRemoveEntry(month, entry.id)} className="absolute top-4 right-4 p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-md transition-colors" title="Remove Flight">
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                          
+                          <div className="font-bold text-sm text-[#3B82F6] mb-5 border-b border-slate-200 pb-2 inline-block">Flight Record #{index + 1}</div>
+                          
+                          <div className="mb-6 w-full md:w-1/2 md:pr-3">
+                            <label className="mb-2 block text-xs font-bold text-slate-500 uppercase tracking-wider">Flight Name / Number <span className="text-red-500">*</span></label>
+                            <input 
+                              value={entry.flightName} onChange={(e) => updateEntry(month, entry.id, 'flightName', e.target.value)} 
+                              type="text" placeholder="e.g. 6E-201" 
+                              className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" 
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
+                            <div>
+                              <label className="mb-2 block text-xs font-bold text-slate-500 uppercase tracking-wider">Arrival <span className="text-red-500">*</span></label>
+                              <div className="grid grid-cols-2 gap-3">
+                                <input value={entry.arrivalDate} onChange={(e) => updateEntry(month, entry.id, 'arrivalDate', e.target.value)} type="date" className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" />
+                                <input value={entry.arrivalTime} onChange={(e) => updateEntry(month, entry.id, 'arrivalTime', e.target.value)} type="time" className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="mb-2 block text-xs font-bold text-slate-500 uppercase tracking-wider">Departure <span className="text-red-500">*</span></label>
+                              <div className="grid grid-cols-2 gap-3">
+                                <input value={entry.departureDate} onChange={(e) => updateEntry(month, entry.id, 'departureDate', e.target.value)} type="date" className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" />
+                                <input value={entry.departureTime} onChange={(e) => updateEntry(month, entry.id, 'departureTime', e.target.value)} type="time" className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" />
+                              </div>
+                            </div>
+                          </div>
+
+                          {activeTab === 'udf' && (
+                            <div className="mt-6 pt-4 border-t border-slate-200 w-full md:w-1/2 md:pr-3">
+                              <label className="mb-2 block text-xs font-bold text-slate-500 uppercase tracking-wider">Total Passengers <span className="text-red-500">*</span></label>
+                              <input value={entry.passengers} onChange={(e) => updateEntry(month, entry.id, 'passengers', e.target.value)} type="number" className="w-full rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" placeholder="e.g. 145" />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+
+                      {/* Add Entry Button for this specific month */}
+                      <button type="button" onClick={() => handleAddEntry(month)} className="flex items-center gap-2 text-sm font-bold text-[#3B82F6] hover:text-[#1E40AF] px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors w-max">
+                        <Plus size={18} /> Add Another Flight to {month}
+                      </button>
                     </div>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-                        <Clock size={14} />
-                      </div>
-                      <input value={departureTime} onChange={(e) => setDepartureTime(e.target.value)} type="time" className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 py-2.5 text-sm text-slate-800 transition-colors focus:border-[#3B82F6] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3B82F6]" />
-                    </div>
+
                   </div>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-slate-700">Arrival Date <span className="text-red-500">*</span></label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-                      <Calendar size={14} />
-                    </div>
-                    <input value={arrivalDate} onChange={(e) => setArrivalDate(e.target.value)} type="date" className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 py-2.5 text-sm text-slate-800 transition-colors focus:border-[#3B82F6] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3B82F6]" />
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-slate-700">Number of Passengers <span className="text-red-500">*</span></label>
-                  <input value={passengers} onChange={(e) => setPassengers(e.target.value)} type="number" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 transition-colors focus:border-[#3B82F6] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3B82F6]" placeholder="e.g. 145" />
+                ))}
+
+                {/* Final Master Generate Button */}
+                <div className="flex justify-end pt-4">
+                  <button type="button" onClick={handleGenerate} className="rounded-xl bg-[#3B82F6] px-12 py-4 text-base font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-600 hover:-translate-y-0.5 active:translate-y-0">
+                    Generate Final Invoice
+                  </button>
                 </div>
               </div>
             )}
+          </div>
 
-            <div className="pt-4 pb-2">
-              <button type="button" onClick={handleGenerate} className="w-full rounded-xl bg-[#3B82F6] py-3.5 text-sm font-bold text-white shadow-md shadow-blue-500/20 transition-all hover:bg-blue-600 active:scale-[0.98]">
-                Generate {activeTab === 'parking' ? 'Parking' : 'UDF'} Invoice
+        ) : (
+
+          // ==========================================
+          // 2. INVOICE VIEW (Professional Document)
+          // ==========================================
+          <div className="animate-in fade-in zoom-in-[0.99] duration-300 ease-out w-full max-w-5xl bg-white shadow-2xl border border-slate-200 mb-12 flex flex-col">
+            
+            {/* System Action Header */}
+            <div className="flex items-center justify-between px-8 py-4 border-b border-slate-200 bg-slate-100 print:hidden">
+              <h3 className="text-sm font-bold text-slate-600 uppercase tracking-wider">Invoice Document Preview</h3>
+              <div className="flex items-center gap-4">
+                <button className="flex items-center gap-2 bg-white border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50">
+                  <Download size={14} /> DOWNLOAD PDF
+                </button>
+                <button onClick={() => setInvoiceData(null)} className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-colors" title="Close">
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* --- INVOICE PAPER BODY --- */}
+            <div className="p-10 md:p-14 bg-white text-slate-900">
+              
+              {/* Header */}
+              <div className="flex justify-between items-start pb-6 border-b-2 border-slate-800">
+                <div className="flex items-end gap-4">
+                  <div className="h-14 w-12 flex-shrink-0">
+                    <img src="/logo.png" alt="Logo" className="h-full w-full object-contain object-left" onError={(e) => { e.target.style.display = 'none'; }} />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 uppercase">Bilasa Devi Kevat Airport</h1>
+                    <p className="text-xs text-slate-600 font-medium tracking-wide">GOVERNMENT OF CHHATTISGARH</p>
+                    <p className="text-[10px] text-slate-500 font-medium tracking-wide pt-0.5">apb-bilaspur@cg.gov.in | Tel: 07752-291575</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <h2 className="text-4xl font-bold tracking-widest text-slate-800 uppercase mb-2">TAX INVOICE</h2>
+                  <p className="text-xs text-slate-600">GSTIN: <span className="font-bold text-slate-800">22AAAGB0886Q1Z8</span></p>
+                </div>
+              </div>
+
+              {/* Bill To / Info Grid */}
+              <div className="grid grid-cols-2 gap-12 py-8 border-b border-slate-300">
+                <div className="space-y-1">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Billed To:</div>
+                  <h2 className="text-base font-bold text-slate-900">{invoiceData.airline}</h2>
+                  <p className="text-xs text-slate-700">Corporate Head Office</p>
+                  <p className="text-xs text-slate-700 pt-2"><span className="text-slate-500 mr-2">GSTIN/UIN:</span> <span className="uppercase">07AAACA1517B1Z1</span></p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-bold text-slate-600 uppercase text-xs w-32">Invoice No:</span>
+                    <span className="font-bold text-slate-900 text-right">INV-2026-005</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="font-bold text-slate-600 uppercase text-xs w-32">Date Issued:</span>
+                    <span className="font-medium text-slate-900 text-right">{invoiceData.invoiceDate}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="font-bold text-slate-600 uppercase text-xs w-32">Charge Type:</span>
+                    <span className="font-medium text-slate-900 text-right">{invoiceData.type === 'Parking' ? 'Aircraft Parking Charges' : 'User Development Fee'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Data Table */}
+              <div className="mt-8 border border-slate-800 border-b-0">
+                
+                {/* Dynamic Table Header */}
+                <div className="grid grid-cols-[1fr_80px_100px_100px_120px] gap-4 bg-slate-800 text-white p-3 text-[10px] font-bold uppercase tracking-widest">
+                  <div>Description & Flight Details</div>
+                  <div className="text-right">HSN/SAC</div>
+                  <div className="text-right">{invoiceData.type === 'Parking' ? 'BILLABLE HRS' : 'PASSENGERS'}</div>
+                  <div className="text-right">RATE</div>
+                  <div className="text-right">AMOUNT</div>
+                </div>
+
+                {/* Iterate through Months */}
+                {invoiceData.processedMonths.map((monthGroup, mIdx) => (
+                  <React.Fragment key={mIdx}>
+                    {/* Month Section Header */}
+                    <div className="bg-slate-100/80 px-4 py-2 border-b border-slate-300 text-xs font-extrabold text-slate-800 uppercase tracking-widest flex justify-between">
+                      <span>{monthGroup.monthName} Operations</span>
+                      <span>Subtotal: {formatCurrency(monthGroup.monthTotal)}</span>
+                    </div>
+
+                    {/* Flights within the month */}
+                    {monthGroup.flights.map((entry, idx) => (
+                      <div key={idx} className="grid grid-cols-[1fr_80px_100px_100px_120px] gap-4 p-4 border-b border-slate-300 items-start text-sm bg-white">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-900">{invoiceData.airline}</span>
+                          <span className="text-xs font-bold text-slate-500 mb-1.5">Flight: {entry.flightName}</span>
+                          
+                          <div className="text-[11px] text-slate-600 space-y-0.5 border-l-2 border-slate-300 pl-2">
+                            <p><span className="font-medium text-slate-500">Arr:</span> {entry.arrivalStr}</p>
+                            <p><span className="font-medium text-slate-500">Dep:</span> {entry.departureStr}</p>
+                          </div>
+                          
+                          {invoiceData.type === 'Parking' && (
+                            <div className="text-[10px] text-slate-500 mt-2 uppercase tracking-wide bg-slate-50 p-1 rounded w-max border border-slate-100">
+                              Total: {entry.totalHours} Hrs (Less 2 Hrs Free)
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right font-medium text-slate-700 mt-1">9967</div>
+                        <div className="text-right font-medium text-slate-900 mt-1">
+                          {invoiceData.type === 'Parking' ? entry.billableHours : entry.passengerCount}
+                        </div>
+                        <div className="text-right font-medium text-slate-700 mt-1">{formatCurrency(entry.rate)}</div>
+                        <div className="text-right font-bold text-slate-900 mt-1">{formatCurrency(entry.amount)}</div>
+                      </div>
+                    ))}
+                  </React.Fragment>
+                ))}
+
+                {/* Subtotals & Taxes */}
+                <div className="flex justify-end border-b border-slate-800 p-4 bg-slate-50">
+                  <div className="w-80 space-y-3 text-sm">
+                    <div className="flex justify-between items-center text-slate-700">
+                      <span className="font-bold text-xs uppercase tracking-wide">Total Taxable Value</span>
+                      <span className="font-bold">{formatCurrency(invoiceData.subTotal)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-600 border-t border-dashed border-slate-300 pt-2">
+                      <span className="text-xs">ADD CGST @9%</span>
+                      <span>{formatCurrency(invoiceData.cgst)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-600">
+                      <span className="text-xs">ADD SGST @9%</span>
+                      <span>{formatCurrency(invoiceData.sgst)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-600 pb-2 border-b border-slate-800">
+                      <span className="text-xs">ADD IGST @18%</span>
+                      <span>{formatCurrency(invoiceData.igst)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-900 pt-1">
+                      <span className="font-bold text-sm uppercase tracking-widest">Grand Total Due</span>
+                      <span className="font-bold text-xl">{formatCurrency(invoiceData.total)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Block */}
+              <div className="mt-8 flex justify-between items-end border-t-2 border-slate-800 pt-6">
+                
+                {/* Amount in words & Bank Details */}
+                <div className="w-1/2 space-y-6">
+                  <div>
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Amount in Words</div>
+                    <div className="text-xs font-bold text-slate-800 uppercase">
+                      {numberToWords(Math.round(invoiceData.total))}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Bank Remittance Details</div>
+                    <div className="text-xs text-slate-800 space-y-1 font-medium border border-slate-300 p-3 bg-slate-50 w-max">
+                      <p><span className="text-slate-500 w-16 inline-block">Bank:</span> HDFC BANK</p>
+                      <p><span className="text-slate-500 w-16 inline-block">A/C No:</span> 028205501441</p>
+                      <p><span className="text-slate-500 w-16 inline-block">IFSC:</span> HDFC0004352</p>
+                      <p><span className="text-slate-500 w-16 inline-block">Branch:</span> Vardhaman Complex, Bilaspur (C.G.)</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Signature */}
+                <div className="flex flex-col items-center">
+                  <div className="h-16 w-48 border-b-2 border-slate-800 flex items-end justify-center pb-2 mb-1">
+                    {signatureUrl ? (
+                      <img src={signatureUrl} alt="Signature" className="h-12 object-contain" />
+                    ) : (
+                      <span className="text-[10px] text-slate-400 italic font-medium">Digital Signature Authorized</span>
+                    )}
+                  </div>
+                  <span className="font-bold text-slate-900 text-xs uppercase tracking-widest">Terminal Manager</span>
+                  <span className="text-slate-600 text-[10px] uppercase tracking-widest mt-0.5">Bilaspur Airport</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Form Actions (Not printed) */}
+            <div className="flex items-center justify-end gap-3 px-8 py-5 border-t border-slate-200 bg-slate-100 print:hidden">
+              <button onClick={() => setInvoiceData(null)} className="px-6 py-2.5 text-xs font-bold text-slate-600 transition hover:text-slate-900 uppercase tracking-wide">
+                Discard
+              </button>
+              <button onClick={() => alert("Saved Draft!")} className="border border-slate-800 bg-white px-8 py-2.5 text-xs font-bold text-slate-900 transition hover:bg-slate-50 uppercase tracking-wide">
+                Save Draft
+              </button>
+              <button onClick={resetForm} className="bg-[#3B82F6] px-8 py-2.5 text-xs font-bold text-white transition hover:bg-blue-600 shadow-md shadow-blue-500/20 uppercase tracking-wide flex items-center gap-2">
+                Save & Send Invoice
               </button>
             </div>
-          </form>
-        </div>
-      </div>
 
-      {/* --- RIGHT COLUMN: Live Preview Container --- */}
-      <div className="flex flex-1 flex-col rounded-2xl border border-slate-100 bg-white p-6 shadow-xl mb-4">
-        
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-slate-800">Preview</h3>
-          <div className="flex items-center gap-3">
-             {invoiceData && (
-                <button className="rounded-lg bg-slate-900 px-4 py-1.5 text-xs font-bold text-white transition hover:bg-slate-800">
-                  PDF
-                </button>
-             )}
-          </div>
-        </div>
-
-        {/* The Workspace Area */}
-        <div className="flex-1 overflow-y-auto rounded-xl bg-slate-50/50 border border-slate-100 flex items-start justify-center custom-scrollbar relative">
-          
-          {!invoiceData ? (
-            <div className="m-auto flex flex-col items-center justify-center text-center max-w-sm animate-in fade-in duration-500">
-              <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-slate-200/50">
-                <svg className="h-10 w-10 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-              </div>
-              <h4 className="text-lg font-bold text-slate-700">No invoice created yet</h4>
-              <p className="mt-2 text-sm text-slate-500">Fill in the flight details on the left and hit generate to see the live preview of the commercial receipt.</p>
-            </div>
-          ) : (
-            
-            <div className="w-full max-w-3xl transform origin-top transition-all animate-in fade-in slide-in-from-bottom-4 duration-500 shadow-2xl bg-white flex flex-col min-h-full font-sans text-slate-800">
-              
-              {/* Header: Logo and "INVOICE" */}
-              <div className="flex w-full items-center justify-between px-12 pt-12 pb-6">
-                <div className="h-12 w-10 flex-shrink-0">
-                  <img 
-                    src="/logo.png" 
-                    alt="Airport Logo" 
-                    className="h-full w-full object-contain object-left" 
-                    onError={(e) => {
-                      e.target.src = '/image/logo.png';
-                    }} 
-                  />
-                </div>
-                <h1 className="text-2xl font-bold tracking-[0.15em] text-slate-900 uppercase mt-1">Invoice</h1>
-              </div>
-
-              {/* Client & Company Info */}
-              <div className="flex justify-between items-start px-12 py-6">
-                <div className="space-y-1">
-                  <h2 className="text-lg font-medium text-slate-800 mb-2">{invoiceData.airline}</h2>
-                  <p className="text-xs text-slate-600">Alliance Bhawan, Domestic Terminal</p>
-                  <p className="text-xs text-slate-600 mb-4">1, I.G.I Airport, New Delhi - 110037</p>
-                  
-                  <div className="grid grid-cols-[100px_1fr] gap-2 text-xs pt-2">
-                    <span className="text-slate-500">Date Issued:</span>
-                    <span className="font-medium text-slate-800">{invoiceData.invoiceDate}</span>
-                  </div>
-                  <div className="grid grid-cols-[100px_1fr] gap-2 text-xs">
-                    <span className="text-slate-500">Invoice No:</span>
-                    <span className="font-medium text-slate-800">5</span>
-                  </div>
-                  <div className="grid grid-cols-[100px_1fr] gap-2 text-xs">
-                    <span className="text-slate-500">Flight No:</span>
-                    <span className="font-medium text-slate-800">{invoiceData.flightName}</span>
-                  </div>
-                  <div className="grid grid-cols-[100px_1fr] gap-2 text-xs">
-                    <span className="text-slate-500">
-                      {invoiceData.type === 'Parking' ? 'Period:' : 'Date of Flight:'}
-                    </span>
-                    <span className="font-medium text-slate-800">
-                      {invoiceData.type === 'Parking' ? `${invoiceData.arrivalStr} TO ${invoiceData.departureStr}` : invoiceData.arrivalStr}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-[100px_1fr] gap-2 text-xs mt-1">
-                    <span className="text-slate-500">GSTIN/UIN:</span>
-                    <span className="font-medium text-slate-800">07AAACA1517B1Z1</span>
-                  </div>
-                </div>
-                
-                <div className="text-right text-xs text-slate-600 space-y-1 mt-1">
-                  <p className="font-medium text-slate-800 text-sm">BILASA DEVI KEVAT AIRPORT, BILASPUR</p>
-                  <p>GOVERNMENT OF CHHATTISGARH</p>
-                  <p>GSTIN: 22AAAGB0886Q1Z8</p>
-                  <p className="pt-2">Tel: 07752-291575</p>
-                  <p>Email: apd-bilaspur@cg.gov.in</p>
-                </div>
-              </div>
-
-              {/* Data Table with FIXED Grid spacing */}
-              <div className="px-12 mt-4 flex-1">
-                {/* Table Header */}
-                <div className="grid grid-cols-[1fr_80px_80px_100px_120px] gap-4 border-b border-slate-300 pb-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                  <div>Description of Charges</div>
-                  <div className="text-right shrink-0">HSN/SAC</div>
-                  <div className="text-right shrink-0">{invoiceData.type === 'Parking' ? 'HOURS' : 'QTY'}</div>
-                  <div className="text-right shrink-0">RATE</div>
-                  <div className="text-right shrink-0">AMOUNT</div>
-                </div>
-
-                {/* Main Table Row */}
-                <div className="grid grid-cols-[1fr_80px_80px_100px_120px] gap-4 py-4 border-b border-slate-100 items-start text-sm">
-                  <div className="flex flex-col">
-                    {invoiceData.type === 'Parking' ? (
-                      <>
-                        <span className="font-medium text-slate-800">Parking Charges</span>
-                        <span className="text-[11px] text-slate-500 mt-0.5">Total Hours: {invoiceData.totalHours}</span>
-                        <span className="text-[11px] text-slate-500">Free Hours: 2</span>
-                        <span className="font-medium text-slate-800 mt-3">WATCH HOURS EXTENSION</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="font-medium text-slate-800">User Development Fee (UDF)</span>
-                        <span className="text-[11px] text-slate-500 mt-0.5">Total Passengers: {invoiceData.passengerCount}</span>
-                        <span className="text-[11px] text-slate-500">Rate applied per departing passenger</span>
-                      </>
-                    )}
-                  </div>
-                  <div className="text-right font-medium text-slate-800 shrink-0 mt-1">9967</div>
-                  <div className="text-right font-medium text-slate-800 shrink-0 mt-1">
-                    {invoiceData.type === 'Parking' ? invoiceData.billableHours : invoiceData.passengerCount}
-                  </div>
-                  <div className="text-right font-medium text-slate-800 shrink-0 mt-1">{formatCurrency(invoiceData.rate)}</div>
-                  <div className="text-right font-medium text-slate-800 shrink-0 mt-1">{formatCurrency(invoiceData.amount)}</div>
-                </div>
-
-                {/* Tax Rows - Aligned Right */}
-                <div className="flex flex-col items-end py-4 border-b border-slate-100 gap-2 text-sm">
-                  <div className="grid grid-cols-[1fr_120px] gap-4 w-64 items-center">
-                    <div className="text-right font-medium text-slate-500">Taxable Value</div>
-                    <div className="text-right font-medium text-slate-800 shrink-0">{formatCurrency(invoiceData.amount)}</div>
-                  </div>
-                  <div className="grid grid-cols-[1fr_120px] gap-4 w-64 items-center">
-                    <div className="text-right font-medium text-slate-500">ADD CGST @9%</div>
-                    <div className="text-right font-medium text-slate-800 shrink-0">{formatCurrency(invoiceData.cgst)}</div>
-                  </div>
-                  <div className="grid grid-cols-[1fr_120px] gap-4 w-64 items-center">
-                    <div className="text-right font-medium text-slate-500">ADD SGST @9%</div>
-                    <div className="text-right font-medium text-slate-800 shrink-0">{formatCurrency(invoiceData.sgst)}</div>
-                  </div>
-                  <div className="grid grid-cols-[1fr_120px] gap-4 w-64 items-center">
-                    <div className="text-right font-medium text-slate-500">ADD IGST @18%</div>
-                    <div className="text-right font-medium text-slate-800 shrink-0">{formatCurrency(invoiceData.igst)}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bottom Gray Footer Block */}
-              <div className="bg-[#f0f0ed] px-12 py-8 mt-12">
-                
-                {/* 1. AMOUNT IN WORDS */}
-                <div className="mb-6 border-b border-slate-300 pb-4">
-                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Amount in Words</div>
-                  <div className="text-xs font-medium text-slate-700 leading-relaxed uppercase">
-                    {numberToWords(Math.round(invoiceData.total))}
-                  </div>
-                </div>
-
-                {/* 2. BANK DETAILS & TOTAL DUE */}
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Bank Details</div>
-                    <div className="text-xs text-slate-800 space-y-1 font-medium">
-                      <p>HDFC BANK, A/C No. 028205501441</p>
-                      <p>IFSC - HDFC0004352</p>
-                      <p className="text-slate-500 text-[10px] uppercase tracking-wider pt-2 mb-0.5">Branch</p>
-                      <p>Vardhaman Complex, Raipur Road,</p>
-                      <p>Parsada, Bilaspur (C.G.) 495220</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Total Due</div>
-                    <div className="text-2xl font-bold tracking-tight text-[#3B82F6] shrink-0">
-                      {formatCurrency(invoiceData.total)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Terminal Manager Signature Block */}
-                <div className="mt-12 flex justify-between items-end">
-                  <div className="flex items-center gap-1.5 font-medium text-xs text-slate-600 mb-4">
-                    <svg className="h-4 w-4 text-[#3B82F6]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" /></svg>
-                    Thank you!
-                  </div>
-                  
-                  <div className="flex flex-col items-center">
-                    {signatureUrl ? (
-                      <img src={signatureUrl} alt="Terminal Manager Signature" className="h-12 w-auto mb-2 object-contain" />
-                    ) : (
-                      <div className="h-10 w-32 border border-dashed border-slate-300 rounded-md flex items-center justify-center text-[10px] text-slate-400 mb-2 cursor-pointer hover:bg-white hover:text-slate-600 transition-colors">
-                        + Upload Signature
-                      </div>
-                    )}
-                    <div className="h-[1px] w-32 bg-slate-800 mb-1"></div>
-                    <span className="font-bold text-slate-800 text-[11px] uppercase tracking-wide">Terminal Manager</span>
-                    <span className="text-slate-500 text-[10px] uppercase tracking-wider">Bilaspur Airport</span>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-          )}
-        </div>
-
-        {/* Footer Actions */}
-        {invoiceData && (
-          <div className="mt-6 flex items-center justify-end gap-3 pt-2">
-            <button 
-              onClick={handleBack} 
-              className="rounded-lg px-6 py-2.5 text-sm font-bold text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
-            >
-              Back
-            </button>
-            <button 
-              onClick={handleSave}
-              className="rounded-lg border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:border-slate-300"
-            >
-              Save
-            </button>
-            <button 
-              onClick={handleSaveAndSend}
-              className="flex items-center gap-2 rounded-lg bg-[#3B82F6] px-6 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-[#2563EB]"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-              Save and Send
-            </button>
           </div>
         )}
 
