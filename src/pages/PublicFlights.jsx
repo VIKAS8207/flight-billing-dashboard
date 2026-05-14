@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ChevronDown, Plus, Calendar, Clock, X, Download, Trash2, CheckCircle2,
-  ReceiptIndianRupee, Plane, FileSignature
+  ChevronDown, Plus, Calendar, Clock, X, Download, Trash2, CheckCircle2, History 
 } from 'lucide-react';
 
 // Utility to format numbers
@@ -38,7 +37,7 @@ const AIRLINE_OPTIONS = ['M/s Alliance Air Aviation Limited', 'M/s IndiGo Airlin
 
 export default function PublicFlights() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('parking');
+  const [activeTab, setActiveTab] = useState('watch'); // 'watch' or 'udf'
   
   // Global Airline State
   const [airline, setAirline] = useState('');
@@ -52,6 +51,9 @@ export default function PublicFlights() {
   const [signatureUrl, setSignatureUrl] = useState(null); 
   const [invoiceData, setInvoiceData] = useState(null);
 
+  // --- MOCK DATABASE FOR HISTORY ---
+  const [billingHistory, setBillingHistory] = useState([]);
+
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -62,6 +64,21 @@ export default function PublicFlights() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Get History for a specific month and airline
+  const getMonthHistory = (monthName) => {
+    if (!airline) return [];
+    let history = [];
+    billingHistory.forEach(invoice => {
+      if (invoice.airline === airline) {
+        const monthData = invoice.processedMonths.find(m => m.monthName === monthName);
+        if (monthData) {
+          history.push(...monthData.flights.map(f => ({...f, invoiceDate: invoice.invoiceDate, type: invoice.type})));
+        }
+      }
+    });
+    return history;
+  };
 
   // --- Step 1: Month Selection Logic ---
   const toggleMonth = (month) => {
@@ -74,7 +91,7 @@ export default function PublicFlights() {
           ...prev, 
           [month]: [{ 
             id: Date.now() + Math.random(), flightName: '', 
-            arrivalDate: '', arrivalTime: '', departureDate: '', departureTime: '', passengers: '' 
+            arrivalDate: '', arrivalTime: '', departureDate: '', departureTime: '', passengers: '', watchHours: '' 
           }]
         }));
       }
@@ -87,7 +104,7 @@ export default function PublicFlights() {
       ...prev,
       [month]: [...prev[month], { 
         id: Date.now() + Math.random(), flightName: '', 
-        arrivalDate: '', arrivalTime: '', departureDate: '', departureTime: '', passengers: '' 
+        arrivalDate: '', arrivalTime: '', departureDate: '', departureTime: '', passengers: '', watchHours: '' 
       }]
     }));
   };
@@ -127,26 +144,22 @@ export default function PublicFlights() {
           return alert(`Please enter a Flight Name/Number for ${month} - Record #${i + 1}`);
         }
 
-        if (activeTab === 'parking') {
-          if (!entry.arrivalDate || !entry.arrivalTime || !entry.departureDate || !entry.departureTime) 
-            return alert(`Please complete all dates/times for ${month} - Record #${i + 1}`);
+        if (activeTab === 'watch') {
+          if (!entry.arrivalDate || !entry.arrivalTime || !entry.departureDate || !entry.departureTime || !entry.watchHours) 
+            return alert(`Please complete all dates/times and Watch Hours for ${month} - Record #${i + 1}`);
 
-          const arrival = new Date(`${entry.arrivalDate}T${entry.arrivalTime}`);
-          const departure = new Date(`${entry.departureDate}T${entry.departureTime}`);
-          
-          if (departure - arrival < 0) return alert(`Departure cannot be before Arrival in ${month} - Record #${i + 1}`);
-          
-          const totalHours = Math.ceil((departure - arrival) / (1000 * 60 * 60));
-          const billableHours = Math.max(0, totalHours - 2);
+          const watchHrs = parseFloat(entry.watchHours);
+          if (isNaN(watchHrs) || watchHrs < 0) return alert(`Invalid Watch Hours in ${month} - Record #${i + 1}`);
+
+          // Direct calculation based ONLY on the input field
           const hourlyRate = 5000;
-          const amount = billableHours * hourlyRate;
+          const amount = watchHrs * hourlyRate;
 
           monthFlights.push({
             ...entry,
             arrivalStr: formatDateTimeStr(entry.arrivalDate, entry.arrivalTime),
             departureStr: formatDateTimeStr(entry.departureDate, entry.departureTime),
-            totalHours,
-            billableHours,
+            watchHours: watchHrs,
             rate: hourlyRate,
             amount
           });
@@ -155,10 +168,6 @@ export default function PublicFlights() {
         } else {
           if (!entry.arrivalDate || !entry.arrivalTime || !entry.departureDate || !entry.departureTime || !entry.passengers) 
             return alert(`Please complete all details and passengers for ${month} - Record #${i + 1}`);
-
-          const arrival = new Date(`${entry.arrivalDate}T${entry.arrivalTime}`);
-          const departure = new Date(`${entry.departureDate}T${entry.departureTime}`);
-          if (departure - arrival < 0) return alert(`Departure cannot be before Arrival in ${month} - Record #${i + 1}`);
 
           const passengerCount = parseInt(entry.passengers, 10);
           if (isNaN(passengerCount) || passengerCount <= 0) return alert(`Invalid passenger count in ${month} - Record #${i + 1}`);
@@ -192,7 +201,7 @@ export default function PublicFlights() {
     const grandTotal = grandTotalAmount + cgst + sgst + igst;
 
     setInvoiceData({
-      type: activeTab === 'parking' ? 'Parking' : 'UDF',
+      type: activeTab === 'watch' ? 'Watch Hour Extension' : 'UDF',
       airline,
       processedMonths,
       subTotal: grandTotalAmount,
@@ -205,10 +214,17 @@ export default function PublicFlights() {
   };
 
   const resetForm = () => {
-    setAirline('');
+    // We intentionally DO NOT reset the airline so they can quickly check other months
     setSelectedMonths([]);
     setMonthRecords({});
     setInvoiceData(null);
+  };
+
+  const handleSaveAndSend = () => {
+    // Save to Mock Database history
+    setBillingHistory(prev => [...prev, invoiceData]);
+    alert("Invoice saved to history and sent successfully!");
+    resetForm();
   };
 
   return (
@@ -236,15 +252,9 @@ export default function PublicFlights() {
             {/* CONFIGURATION CARD */}
             <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-xl">
               
-              <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-4">
-                <div className="flex items-center gap-2 text-lg text-slate-800 font-bold">
-                  <ReceiptIndianRupee className="h-6 w-6 text-[#3B82F6]" /> Invoice Configuration
-                </div>
-              </div>
-
               {/* TABS */}
               <div className="mb-6 flex gap-4 max-w-md">
-                <button onClick={() => { setActiveTab('parking'); setSelectedMonths([]); setMonthRecords({}); }} className={`w-full rounded-lg py-3 text-sm font-bold transition-all ${activeTab === 'parking' ? 'bg-[#3B82F6] text-white shadow-md shadow-blue-500/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Invoice Value</button>
+                <button onClick={() => { setActiveTab('watch'); setSelectedMonths([]); setMonthRecords({}); }} className={`w-full rounded-lg py-3 text-sm font-bold transition-all ${activeTab === 'watch' ? 'bg-[#3B82F6] text-white shadow-md shadow-blue-500/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Watch Hour Extension</button>
                 <button onClick={() => { setActiveTab('udf'); setSelectedMonths([]); setMonthRecords({}); }} className={`w-full rounded-lg py-3 text-sm font-bold transition-all ${activeTab === 'udf' ? 'bg-[#3B82F6] text-white shadow-md shadow-blue-500/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>UDF Invoice</button>
               </div>
 
@@ -289,7 +299,9 @@ export default function PublicFlights() {
                     <button
                       key={month}
                       onClick={() => toggleMonth(month)}
+                      disabled={!airline}
                       className={`relative flex items-center justify-center py-2.5 rounded-lg text-sm font-bold transition-all border ${
+                        !airline ? 'opacity-50 cursor-not-allowed bg-slate-50 border-slate-200' :
                         isSelected 
                           ? 'bg-blue-50 border-[#3B82F6] text-[#3B82F6] shadow-sm' 
                           : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
@@ -301,76 +313,109 @@ export default function PublicFlights() {
                   );
                 })}
               </div>
+              {!airline && <p className="text-xs text-red-500 mt-2 font-medium">Please select an airline to unlock month selection.</p>}
             </div>
 
             {/* DYNAMIC MONTH CONTAINERS */}
             {selectedMonths.length > 0 && (
               <div className="space-y-8 animate-in fade-in duration-300 mt-2">
-                {selectedMonths.map(month => (
-                  <div key={month} className="rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden">
-                    
-                    {/* Month Header */}
-                    <div className="bg-slate-50 px-8 py-5 border-b border-slate-200 flex justify-between items-center">
-                      <h3 className="text-xl font-extrabold text-slate-800">{month} Operations</h3>
-                      <span className="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full">{monthRecords[month].length} Flights</span>
-                    </div>
+                {selectedMonths.map(month => {
+                  const pastHistory = getMonthHistory(month);
 
-                    <div className="p-8 space-y-8">
-                      {monthRecords[month].map((entry, index) => (
-                        <div key={entry.id} className="relative p-6 rounded-xl border border-slate-200 bg-slate-50/50 shadow-sm transition-all hover:border-slate-300">
-                          
-                          {monthRecords[month].length > 1 && (
-                            <button onClick={() => handleRemoveEntry(month, entry.id)} className="absolute top-4 right-4 p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-md transition-colors" title="Remove Flight">
-                              <Trash2 size={16} />
-                            </button>
-                          )}
-                          
-                          <div className="font-bold text-sm text-[#3B82F6] mb-5 border-b border-slate-200 pb-2 inline-block">Flight Record #{index + 1}</div>
-                          
-                          <div className="mb-6 w-full md:w-1/2 md:pr-3">
-                            <label className="mb-2 block text-xs font-bold text-slate-500 uppercase tracking-wider">Flight Name / Number <span className="text-red-500">*</span></label>
-                            <input 
-                              value={entry.flightName} onChange={(e) => updateEntry(month, entry.id, 'flightName', e.target.value)} 
-                              type="text" placeholder="e.g. 6E-201" 
-                              className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" 
-                            />
+                  return (
+                    <div key={month} className="rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden">
+                      
+                      {/* Month Header */}
+                      <div className="bg-slate-50 px-8 py-5 border-b border-slate-200 flex justify-between items-center">
+                        <h3 className="text-xl font-extrabold text-slate-800">{month} Operations</h3>
+                        <span className="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full">{monthRecords[month].length} New Flights</span>
+                      </div>
+
+                      <div className="p-8 space-y-8">
+                        
+                        {/* --- HISTORY SECTION --- */}
+                        {pastHistory.length > 0 && (
+                          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 mb-8">
+                            <h4 className="flex items-center gap-2 text-emerald-800 font-bold text-sm mb-3">
+                              <History size={16} /> Previously Billed in {month}
+                            </h4>
+                            <div className="space-y-2">
+                              {pastHistory.map((hist, hIdx) => (
+                                <div key={hIdx} className="flex justify-between items-center bg-white border border-emerald-100 p-3 rounded-lg text-sm">
+                                  <div>
+                                    <span className="font-bold text-slate-800">{hist.flightName}</span>
+                                    <span className="text-slate-500 text-xs ml-3">Billed on: {hist.invoiceDate} ({hist.type})</span>
+                                  </div>
+                                  <div className="font-bold text-emerald-700">{formatCurrency(hist.amount)}</div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
+                        )}
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
-                            <div>
-                              <label className="mb-2 block text-xs font-bold text-slate-500 uppercase tracking-wider">Arrival <span className="text-red-500">*</span></label>
-                              <div className="grid grid-cols-2 gap-3">
-                                <input value={entry.arrivalDate} onChange={(e) => updateEntry(month, entry.id, 'arrivalDate', e.target.value)} type="date" className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" />
-                                <input value={entry.arrivalTime} onChange={(e) => updateEntry(month, entry.id, 'arrivalTime', e.target.value)} type="time" className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" />
+                        {/* --- NEW ENTRIES --- */}
+                        {monthRecords[month].map((entry, index) => (
+                          <div key={entry.id} className="relative p-6 rounded-xl border border-slate-200 bg-slate-50/50 shadow-sm transition-all hover:border-slate-300">
+                            
+                            {monthRecords[month].length > 1 && (
+                              <button onClick={() => handleRemoveEntry(month, entry.id)} className="absolute top-4 right-4 p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-md transition-colors" title="Remove Flight">
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                            
+                            <div className="font-bold text-sm text-[#3B82F6] mb-5 border-b border-slate-200 pb-2 inline-block">New Flight Record #{index + 1}</div>
+                            
+                            <div className="mb-6 w-full md:w-1/2 md:pr-3">
+                              <label className="mb-2 block text-xs font-bold text-slate-500 uppercase tracking-wider">Flight Name / Number <span className="text-red-500">*</span></label>
+                              <input 
+                                value={entry.flightName} onChange={(e) => updateEntry(month, entry.id, 'flightName', e.target.value)} 
+                                type="text" placeholder="e.g. 6E-201" 
+                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" 
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
+                              <div>
+                                <label className="mb-2 block text-xs font-bold text-slate-500 uppercase tracking-wider">Arrival <span className="text-red-500">*</span></label>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <input value={entry.arrivalDate} onChange={(e) => updateEntry(month, entry.id, 'arrivalDate', e.target.value)} type="date" className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" />
+                                  <input value={entry.arrivalTime} onChange={(e) => updateEntry(month, entry.id, 'arrivalTime', e.target.value)} type="time" className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" />
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="mb-2 block text-xs font-bold text-slate-500 uppercase tracking-wider">Departure <span className="text-red-500">*</span></label>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <input value={entry.departureDate} onChange={(e) => updateEntry(month, entry.id, 'departureDate', e.target.value)} type="date" className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" />
+                                  <input value={entry.departureTime} onChange={(e) => updateEntry(month, entry.id, 'departureTime', e.target.value)} type="time" className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" />
+                                </div>
                               </div>
                             </div>
 
-                            <div>
-                              <label className="mb-2 block text-xs font-bold text-slate-500 uppercase tracking-wider">Departure <span className="text-red-500">*</span></label>
-                              <div className="grid grid-cols-2 gap-3">
-                                <input value={entry.departureDate} onChange={(e) => updateEntry(month, entry.id, 'departureDate', e.target.value)} type="date" className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" />
-                                <input value={entry.departureTime} onChange={(e) => updateEntry(month, entry.id, 'departureTime', e.target.value)} type="time" className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" />
+                            {activeTab === 'watch' ? (
+                              <div className="mt-6 pt-4 border-t border-slate-200 w-full md:w-1/2 md:pr-3">
+                                <label className="mb-2 block text-xs font-bold text-slate-500 uppercase tracking-wider">Number of Watch Hour Extension <span className="text-red-500">*</span></label>
+                                <input value={entry.watchHours} onChange={(e) => updateEntry(month, entry.id, 'watchHours', e.target.value)} type="number" step="0.5" className="w-full rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" placeholder="e.g. 3" />
+                                <p className="text-[10px] text-slate-400 mt-1 font-medium italic">*Directly multiplies by base rate. No free hours applied.</p>
                               </div>
-                            </div>
+                            ) : (
+                              <div className="mt-6 pt-4 border-t border-slate-200 w-full md:w-1/2 md:pr-3">
+                                <label className="mb-2 block text-xs font-bold text-slate-500 uppercase tracking-wider">Total Passengers <span className="text-red-500">*</span></label>
+                                <input value={entry.passengers} onChange={(e) => updateEntry(month, entry.id, 'passengers', e.target.value)} type="number" className="w-full rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" placeholder="e.g. 145" />
+                              </div>
+                            )}
                           </div>
+                        ))}
 
-                          {activeTab === 'udf' && (
-                            <div className="mt-6 pt-4 border-t border-slate-200 w-full md:w-1/2 md:pr-3">
-                              <label className="mb-2 block text-xs font-bold text-slate-500 uppercase tracking-wider">Total Passengers <span className="text-red-500">*</span></label>
-                              <input value={entry.passengers} onChange={(e) => updateEntry(month, entry.id, 'passengers', e.target.value)} type="number" className="w-full rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" placeholder="e.g. 145" />
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                        {/* Add Entry Button for this specific month */}
+                        <button type="button" onClick={() => handleAddEntry(month)} className="flex items-center gap-2 text-sm font-bold text-[#3B82F6] hover:text-[#1E40AF] px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors w-max">
+                          <Plus size={18} /> Add Another Flight to {month}
+                        </button>
+                      </div>
 
-                      {/* Add Entry Button for this specific month */}
-                      <button type="button" onClick={() => handleAddEntry(month)} className="flex items-center gap-2 text-sm font-bold text-[#3B82F6] hover:text-[#1E40AF] px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors w-max">
-                        <Plus size={18} /> Add Another Flight to {month}
-                      </button>
                     </div>
-
-                  </div>
-                ))}
+                  );
+                })}
 
                 {/* Final Master Generate Button */}
                 <div className="flex justify-end pt-4">
@@ -443,7 +488,7 @@ export default function PublicFlights() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="font-bold text-slate-600 uppercase text-xs w-32">Charge Type:</span>
-                    <span className="font-medium text-slate-900 text-right">{invoiceData.type === 'Parking' ? 'Aircraft Parking Charges' : 'User Development Fee'}</span>
+                    <span className="font-medium text-slate-900 text-right">{invoiceData.type}</span>
                   </div>
                 </div>
               </div>
@@ -451,11 +496,10 @@ export default function PublicFlights() {
               {/* Data Table */}
               <div className="mt-8 border border-slate-800 border-b-0">
                 
-                {/* Dynamic Table Header */}
-                <div className="grid grid-cols-[1fr_80px_100px_100px_120px] gap-4 bg-slate-800 text-white p-3 text-[10px] font-bold uppercase tracking-widest">
+                {/* Dynamic Table Header - REMOVED HSN/SAC */}
+                <div className="grid grid-cols-[1fr_120px_120px_140px] gap-4 bg-slate-800 text-white p-3 text-[10px] font-bold uppercase tracking-widest">
                   <div>Description & Flight Details</div>
-                  <div className="text-right">HSN/SAC</div>
-                  <div className="text-right">{invoiceData.type === 'Parking' ? 'BILLABLE HRS' : 'PASSENGERS'}</div>
+                  <div className="text-right">{invoiceData.type === 'Watch Hour Extension' ? 'WATCH HRS' : 'PASSENGERS'}</div>
                   <div className="text-right">RATE</div>
                   <div className="text-right">AMOUNT</div>
                 </div>
@@ -471,7 +515,7 @@ export default function PublicFlights() {
 
                     {/* Flights within the month */}
                     {monthGroup.flights.map((entry, idx) => (
-                      <div key={idx} className="grid grid-cols-[1fr_80px_100px_100px_120px] gap-4 p-4 border-b border-slate-300 items-start text-sm bg-white">
+                      <div key={idx} className="grid grid-cols-[1fr_120px_120px_140px] gap-4 p-4 border-b border-slate-300 items-start text-sm bg-white">
                         <div className="flex flex-col">
                           <span className="font-bold text-slate-900">{invoiceData.airline}</span>
                           <span className="text-xs font-bold text-slate-500 mb-1.5">Flight: {entry.flightName}</span>
@@ -480,16 +524,10 @@ export default function PublicFlights() {
                             <p><span className="font-medium text-slate-500">Arr:</span> {entry.arrivalStr}</p>
                             <p><span className="font-medium text-slate-500">Dep:</span> {entry.departureStr}</p>
                           </div>
-                          
-                          {invoiceData.type === 'Parking' && (
-                            <div className="text-[10px] text-slate-500 mt-2 uppercase tracking-wide bg-slate-50 p-1 rounded w-max border border-slate-100">
-                              Total: {entry.totalHours} Hrs (Less 2 Hrs Free)
-                            </div>
-                          )}
                         </div>
-                        <div className="text-right font-medium text-slate-700 mt-1">9967</div>
+                        
                         <div className="text-right font-medium text-slate-900 mt-1">
-                          {invoiceData.type === 'Parking' ? entry.billableHours : entry.passengerCount}
+                          {invoiceData.type === 'Watch Hour Extension' ? entry.watchHours : entry.passengerCount}
                         </div>
                         <div className="text-right font-medium text-slate-700 mt-1">{formatCurrency(entry.rate)}</div>
                         <div className="text-right font-bold text-slate-900 mt-1">{formatCurrency(entry.amount)}</div>
@@ -571,7 +609,7 @@ export default function PublicFlights() {
               <button onClick={() => alert("Saved Draft!")} className="border border-slate-800 bg-white px-8 py-2.5 text-xs font-bold text-slate-900 transition hover:bg-slate-50 uppercase tracking-wide">
                 Save Draft
               </button>
-              <button onClick={resetForm} className="bg-[#3B82F6] px-8 py-2.5 text-xs font-bold text-white transition hover:bg-blue-600 shadow-md shadow-blue-500/20 uppercase tracking-wide flex items-center gap-2">
+              <button onClick={handleSaveAndSend} className="bg-[#3B82F6] px-8 py-2.5 text-xs font-bold text-white transition hover:bg-blue-600 shadow-md shadow-blue-500/20 uppercase tracking-wide flex items-center gap-2">
                 Save & Send Invoice
               </button>
             </div>

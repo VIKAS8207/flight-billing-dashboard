@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { IndianRupee, History, Save, Users, ArrowRightCircle, Clock, PlaneTakeoff, Percent } from 'lucide-react';
+import { 
+  IndianRupee, History, Save, Users, ArrowRightCircle, Clock, 
+  PlaneLanding, Sun, Moon, Timer, Percent
+} from 'lucide-react';
 
 // Utility to format currency
 const formatCurrency = (amount) => {
@@ -12,17 +15,21 @@ const formatPercent = (amount) => {
 };
 
 export default function ChargesMaster() {
-  // Current Charge States
-  const [parkingCharge, setParkingCharge] = useState(1000);
-  const [udfCharge, setUdfCharge] = useState(200);
-  const [royaltyCharge, setRoyaltyCharge] = useState(36);
+  // Unified State for all Active Charges
+  const [charges, setCharges] = useState({
+    landing: 5000,
+    parking: 1000,
+    dayParking: 1500,
+    nightParking: 2500,
+    watch: 1000,
+    udf: 200,
+    royalty: 36
+  });
 
-  // Input Field States
-  const [parkingInput, setParkingInput] = useState(1000);
-  const [udfInput, setUdfInput] = useState(200);
-  const [royaltyInput, setRoyaltyInput] = useState(36);
+  // Unified State for Input Fields (so users can type without immediately saving)
+  const [inputs, setInputs] = useState({ ...charges });
 
-  // Audit Log State (Pre-populated with some history for visual reference)
+  // Audit Log State (Pre-populated)
   const [auditLog, setAuditLog] = useState([
     {
       id: 1,
@@ -38,285 +45,181 @@ export default function ChargesMaster() {
       id: 2,
       date: '15 Apr 2026',
       time: '02:30 PM',
-      field: 'Parking Charge (Per Hour)',
-      oldValue: 800,
-      newValue: 1000,
+      field: 'Night Parking Charges',
+      oldValue: 2000,
+      newValue: 2500,
       user: 'Terminal Manager',
       isPercent: false
     }
   ]);
 
-  // Handlers
-  const handleUpdateParking = () => {
-    if (Number(parkingInput) === parkingCharge) return; // No change made
-    
+  // Master Configuration Array for rendering cards cleanly
+  const masterConfigs = [
+    { key: 'landing', title: 'Landing Charges', sub: 'Base landing fee', icon: PlaneLanding, color: 'text-indigo-500', bg: 'bg-indigo-50', isPercent: false },
+    { key: 'parking', title: 'Watch Hour Extension', sub: 'Standard parking rate', icon: Clock, color: 'text-[#007BFF]', bg: 'bg-blue-50', isPercent: false },
+    { key: 'dayParking', title: 'Day Parking Charges', sub: 'Daytime block rate', icon: Sun, color: 'text-amber-500', bg: 'bg-amber-50', isPercent: false },
+    { key: 'nightParking', title: 'Night Parking Charges', sub: 'Overnight block rate', icon: Moon, color: 'text-slate-700', bg: 'bg-slate-100', isPercent: false },
+    { key: 'watch', title: 'Watch Hour Extension', sub: 'Per hour extension', icon: Timer, color: 'text-rose-500', bg: 'bg-rose-50', isPercent: false },
+    { key: 'udf', title: 'UDF Charge', sub: 'Per passenger fee', icon: Users, color: 'text-emerald-500', bg: 'bg-emerald-50', isPercent: false },
+    { key: 'royalty', title: 'Royalty Charge', sub: 'NSOP percentage rate', icon: Percent, color: 'text-purple-500', bg: 'bg-purple-50', isPercent: true },
+  ];
+
+  // Generic Update Handler
+  const handleUpdate = (key, title, isPercent) => {
+    const newVal = Number(inputs[key]);
+    const oldVal = charges[key];
+
+    if (newVal === oldVal) return; // No actual change
+
     const now = new Date();
     const newLog = {
       id: Date.now(),
       date: now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
       time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-      field: 'Parking Charge (Per Hour)',
-      oldValue: parkingCharge,
-      newValue: Number(parkingInput),
+      field: title,
+      oldValue: oldVal,
+      newValue: newVal,
       user: 'Terminal Manager (Active)',
-      isPercent: false
+      isPercent
     };
 
-    setParkingCharge(Number(parkingInput));
-    setAuditLog([newLog, ...auditLog]);
-    alert('Parking Charge updated successfully!');
+    setCharges(prev => ({ ...prev, [key]: newVal }));
+    setAuditLog(prev => [newLog, ...prev]);
+    alert(`${title} updated successfully to ${isPercent ? formatPercent(newVal) : formatCurrency(newVal)}!`);
   };
 
-  const handleUpdateUDF = () => {
-    if (Number(udfInput) === udfCharge) return; // No change made
-    
-    const now = new Date();
-    const newLog = {
-      id: Date.now(),
-      date: now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-      time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-      field: 'UDF Charge (Per Passenger)',
-      oldValue: udfCharge,
-      newValue: Number(udfInput),
-      user: 'Terminal Manager (Active)',
-      isPercent: false
-    };
-
-    setUdfCharge(Number(udfInput));
-    setAuditLog([newLog, ...auditLog]);
-    alert('UDF Charge updated successfully!');
-  };
-
-  const handleUpdateRoyalty = () => {
-    if (Number(royaltyInput) === royaltyCharge) return; // No change made
-    
-    const now = new Date();
-    const newLog = {
-      id: Date.now(),
-      date: now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-      time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-      field: 'Royalty Charge',
-      oldValue: royaltyCharge,
-      newValue: Number(royaltyInput),
-      user: 'Terminal Manager (Active)',
-      isPercent: true
-    };
-
-    setRoyaltyCharge(Number(royaltyInput));
-    setAuditLog([newLog, ...auditLog]);
-    alert('Royalty Charge updated successfully!');
+  const handleInputChange = (key, value) => {
+    setInputs(prev => ({ ...prev, [key]: value }));
   };
 
   return (
-    <div className="flex min-h-full w-full flex-col gap-6 font-sans pb-4">
+    <div className="flex min-h-full w-full flex-col gap-8 font-sans pb-8 animate-in fade-in duration-300">
       
       {/* HEADER CONTAINER */}
-      <div className="relative p-6 flex flex-col sm:flex-row justify-between items-center gap-4 z-20">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#eef6ff] to-[#d9eeff] rounded-2xl shadow-md border border-[#007BFF]/10 overflow-hidden -z-10">
-          <svg className="absolute bottom-0 left-0 w-full h-16 text-white" viewBox="0 0 1440 54" fill="currentColor" preserveAspectRatio="none">
-            <path d="M0 54H1440V24.5C1440 24.5 1308 -11.5 1164 4.5C1020 20.5 948 45.5 804 36.5C660 27.5 600 -3.5 456 0.5C312 4.5 204 45.5 60 45.5C24 45.5 0 24.5 0 24.5V54Z" opacity="0.4"/>
-            <path d="M0 54H1440V34.5C1440 34.5 1320 8.5 1176 16.5C1032 24.5 960 44.5 816 38.5C672 32.5 612 8.5 468 12.5C324 16.5 216 46.5 72 46.5C28.8 46.5 0 34.5 0 34.5V54Z" />
-          </svg>
-        </div>
-
-        <div className="relative">
-          <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">Charges Master</h2>
-          <p className="text-sm text-slate-600 font-medium mt-1">Configure global fee parameters for automatic invoice calculation.</p>
+      <div className="relative p-8 flex flex-col justify-center gap-2 z-20 overflow-hidden rounded-2xl shadow-sm border border-[#007BFF]/10 bg-gradient-to-r from-[#eef6ff] to-[#d9eeff]">
+        <svg className="absolute bottom-0 left-0 w-full h-24 text-white" viewBox="0 0 1440 54" fill="currentColor" preserveAspectRatio="none">
+          <path d="M0 54H1440V24.5C1440 24.5 1308 -11.5 1164 4.5C1020 20.5 948 45.5 804 36.5C660 27.5 600 -3.5 456 0.5C312 4.5 204 45.5 60 45.5C24 45.5 0 24.5 0 24.5V54Z" opacity="0.4"/>
+          <path d="M0 54H1440V34.5C1440 34.5 1320 8.5 1176 16.5C1032 24.5 960 44.5 816 38.5C672 32.5 612 8.5 468 12.5C324 16.5 216 46.5 72 46.5C28.8 46.5 0 34.5 0 34.5V54Z" />
+        </svg>
+        <div className="relative z-10">
+          <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">Charges Master Control</h2>
+          <p className="text-sm text-slate-600 font-medium mt-1">Configure global fee parameters for automatic invoice calculation across all flights.</p>
         </div>
       </div>
 
-      {/* TWO COLUMN LAYOUT */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1">
-        
-        {/* LEFT COLUMN: Configuration Cards */}
-        <div className="flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar">
-          
-          {/* Parking Charge Card */}
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-xl relative overflow-hidden group shrink-0">
-            <div className="absolute top-0 right-0 p-6 opacity-5 text-[#007BFF] group-hover:scale-110 transition-transform duration-500 pointer-events-none">
-              <PlaneTakeoff size={100} />
-            </div>
+      {/* TOP SECTION: MASTER CARDS GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {masterConfigs.map((config) => (
+          <div key={config.key} className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
             
-            <div className="flex items-center gap-3 mb-6 relative z-10">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-[#007BFF]">
-                <PlaneTakeoff size={20} />
+            {/* Card Header */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${config.bg} ${config.color}`}>
+                <config.icon size={20} />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-800">Parking Charge</h3>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Applied per billable hour</p>
+                <h3 className="text-sm font-bold text-slate-800 leading-tight">{config.title}</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{config.sub}</p>
               </div>
             </div>
 
-            <div className="flex items-end gap-4 relative z-10">
-              <div className="flex-1">
-                <label className="mb-2 block text-[13px] font-bold text-slate-700">Current Rate (₹)</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-slate-400">
-                    <IndianRupee size={16} />
-                  </div>
-                  <input 
-                    type="number" 
-                    value={parkingInput}
-                    onChange={(e) => setParkingInput(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-slate-900 font-bold outline-none focus:bg-white focus:border-[#007BFF] focus:ring-2 focus:ring-[#007BFF]/20 transition-all text-lg"
-                  />
+            {/* Input & Action */}
+            <div className="flex flex-col gap-3">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                  {config.isPercent ? <Percent size={14} /> : <IndianRupee size={14} />}
                 </div>
+                <input 
+                  type="number" 
+                  value={inputs[config.key]}
+                  onChange={(e) => handleInputChange(config.key, e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-slate-900 font-extrabold outline-none focus:bg-white focus:border-[#007BFF] focus:ring-2 focus:ring-[#007BFF]/20 transition-all text-base"
+                />
               </div>
               <button 
-                onClick={handleUpdateParking}
-                disabled={Number(parkingInput) === parkingCharge}
-                className="flex h-[52px] items-center gap-2 rounded-xl bg-[#007BFF] px-6 text-sm font-bold text-white shadow-md shadow-[#007BFF]/20 transition-all hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#007BFF]"
+                onClick={() => handleUpdate(config.key, config.title, config.isPercent)}
+                disabled={Number(inputs[config.key]) === charges[config.key]}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white shadow-md transition-all hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-900"
               >
-                <Save size={18} /> Update
+                <Save size={14} /> Update Rate
               </button>
             </div>
           </div>
+        ))}
+      </div>
 
-          {/* UDF Charge Card */}
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-xl relative overflow-hidden group shrink-0">
-            <div className="absolute top-0 right-0 p-6 opacity-5 text-emerald-500 group-hover:scale-110 transition-transform duration-500 pointer-events-none">
-              <Users size={100} />
-            </div>
-            
-            <div className="flex items-center gap-3 mb-6 relative z-10">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-500">
-                <Users size={20} />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-800">User Development Fee (UDF)</h3>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Applied per passenger</p>
-              </div>
-            </div>
-
-            <div className="flex items-end gap-4 relative z-10">
-              <div className="flex-1">
-                <label className="mb-2 block text-[13px] font-bold text-slate-700">Current Rate (₹)</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-slate-400">
-                    <IndianRupee size={16} />
-                  </div>
-                  <input 
-                    type="number" 
-                    value={udfInput}
-                    onChange={(e) => setUdfInput(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-slate-900 font-bold outline-none focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-lg"
-                  />
-                </div>
-              </div>
-              <button 
-                onClick={handleUpdateUDF}
-                disabled={Number(udfInput) === udfCharge}
-                className="flex h-[52px] items-center gap-2 rounded-xl bg-emerald-500 px-6 text-sm font-bold text-white shadow-md shadow-emerald-500/20 transition-all hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-emerald-500"
-              >
-                <Save size={18} /> Update
-              </button>
-            </div>
+      {/* BOTTOM SECTION: AUDIT HISTORY TABLE */}
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden mt-4">
+        <div className="bg-slate-50 px-8 py-5 border-b border-slate-200 flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-600 shadow-sm">
+            <History size={16} />
           </div>
-
-          {/* Royalty Master Card */}
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-xl relative overflow-hidden group shrink-0">
-            <div className="absolute top-0 right-0 p-6 opacity-5 text-purple-500 group-hover:scale-110 transition-transform duration-500 pointer-events-none">
-              <Percent size={100} />
-            </div>
-            
-            <div className="flex items-center gap-3 mb-6 relative z-10">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-500">
-                <Percent size={20} />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-800">Royalty Charge</h3>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Applied as percentage</p>
-              </div>
-            </div>
-
-            <div className="flex items-end gap-4 relative z-10">
-              <div className="flex-1">
-                <label className="mb-2 block text-[13px] font-bold text-slate-700">Current Rate (%)</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-slate-400">
-                    <Percent size={16} />
-                  </div>
-                  <input 
-                    type="number" 
-                    value={royaltyInput}
-                    onChange={(e) => setRoyaltyInput(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-slate-900 font-bold outline-none focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all text-lg"
-                  />
-                </div>
-              </div>
-              <button 
-                onClick={handleUpdateRoyalty}
-                disabled={Number(royaltyInput) === royaltyCharge}
-                className="flex h-[52px] items-center gap-2 rounded-xl bg-purple-500 px-6 text-sm font-bold text-white shadow-md shadow-purple-500/20 transition-all hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-purple-500"
-              >
-                <Save size={18} /> Update
-              </button>
-            </div>
-          </div>
-
+          <h3 className="text-lg font-extrabold text-slate-800">Master Change History</h3>
         </div>
 
-        {/* RIGHT COLUMN: Audit History Timeline */}
-        <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-xl flex flex-col h-[full]">
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
-              <History size={16} />
-            </div>
-            <h3 className="text-base font-bold text-slate-800">Change History</h3>
-          </div>
-
-          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar relative">
-            {/* Vertical timeline line */}
-            <div className="absolute left-[15px] top-2 bottom-2 w-0.5 bg-slate-100 rounded-full"></div>
-
-            <div className="flex flex-col gap-6">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-white border-b border-slate-200 text-[11px] font-extrabold uppercase tracking-widest text-slate-500">
+                <th className="px-8 py-4">Date & Time</th>
+                <th className="px-8 py-4">Parameter Changed</th>
+                <th className="px-8 py-4 text-center">Value Update</th>
+                <th className="px-8 py-4 text-right">Updated By</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm font-medium">
               {auditLog.map((log) => (
-                <div key={log.id} className="relative pl-10">
-                  {/* Timeline dot */}
-                  <div className="absolute left-0 top-1 h-8 w-8 rounded-full bg-white border-4 border-slate-50 flex items-center justify-center shadow-sm">
-                    <div className="h-2 w-2 rounded-full bg-[#007BFF]"></div>
-                  </div>
+                <tr key={log.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                  
+                  {/* Date/Time */}
+                  <td className="px-8 py-5">
+                    <div className="font-bold text-slate-800">{log.date}</div>
+                    <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+                      <Clock size={12} /> {log.time}
+                    </div>
+                  </td>
+                  
+                  {/* Field */}
+                  <td className="px-8 py-5 font-bold text-[#007BFF]">
+                    {log.field}
+                  </td>
+                  
+                  {/* Old -> New Values */}
+                  <td className="px-8 py-5">
+                    <div className="flex items-center justify-center gap-4 bg-white border border-slate-200 py-2 px-4 rounded-xl shadow-sm w-max mx-auto">
+                      <span className="font-bold text-slate-400 line-through decoration-slate-300">
+                        {log.isPercent ? formatPercent(log.oldValue) : formatCurrency(log.oldValue)}
+                      </span>
+                      <ArrowRightCircle size={16} className="text-slate-300" />
+                      <span className="font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                        {log.isPercent ? formatPercent(log.newValue) : formatCurrency(log.newValue)}
+                      </span>
+                    </div>
+                  </td>
+                  
+                  {/* User */}
+                  <td className="px-8 py-5 text-right">
+                    <div className="inline-flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                      <div className="h-5 w-5 rounded-full bg-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-600">
+                        {log.user.charAt(0)}
+                      </div>
+                      <span className="font-bold text-slate-700 text-xs">{log.user}</span>
+                    </div>
+                  </td>
 
-                  <div className="bg-slate-50/80 rounded-xl p-4 border border-slate-100 hover:bg-white hover:shadow-md transition-all">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="font-bold text-[13px] text-slate-800">{log.field}</div>
-                      <div className="text-right">
-                        <div className="text-[11px] font-bold text-slate-500">{log.date}</div>
-                        <div className="text-[10px] flex items-center justify-end gap-1 text-slate-400 mt-0.5">
-                          <Clock size={10} /> {log.time}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3 bg-white p-3 rounded-lg border border-slate-100">
-                      <div className="flex-1 text-center">
-                        <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1">Previous</div>
-                        <div className="text-sm font-bold text-slate-600 line-through decoration-slate-300">
-                          {log.isPercent ? formatPercent(log.oldValue) : formatCurrency(log.oldValue)}
-                        </div>
-                      </div>
-                      <div className="text-slate-300">
-                        <ArrowRightCircle size={20} />
-                      </div>
-                      <div className="flex-1 text-center">
-                        <div className="text-[10px] uppercase font-bold tracking-wider text-[#007BFF] mb-1">Updated</div>
-                        <div className="text-sm font-bold text-[#007BFF]">
-                          {log.isPercent ? formatPercent(log.newValue) : formatCurrency(log.newValue)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 text-[10px] font-medium text-slate-500 text-right">
-                      Updated by: <span className="font-bold text-slate-700">{log.user}</span>
-                    </div>
-                  </div>
-                </div>
+                </tr>
               ))}
+            </tbody>
+          </table>
+          
+          {auditLog.length === 0 && (
+            <div className="py-12 text-center text-slate-500 font-medium">
+              No changes recorded yet.
             </div>
-          </div>
+          )}
         </div>
-
       </div>
+
     </div>
   );
 }

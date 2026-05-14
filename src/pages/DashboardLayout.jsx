@@ -108,7 +108,7 @@ export default function DashboardLayout() {
                   <div className={`overflow-hidden transition-all duration-300 ${isBillingOpen ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
                     <div className="ml-9 mt-1 flex flex-col gap-1 border-l-2 border-[#B0E0E6]/50 pl-3">
                       <Link to="/public-flights" className={`py-1.5 text-[13px] font-semibold transition-colors ${location.pathname === '/public-flights' ? 'text-[#007BFF]' : 'text-slate-500 hover:text-[#007BFF]'}`}>
-                        Public Flights
+                        Schedule Airline
                       </Link>
                       <Link to="/private-flights" className={`py-1.5 text-[13px] font-semibold transition-colors ${location.pathname === '/private-flights' ? 'text-[#007BFF]' : 'text-slate-500 hover:text-[#007BFF]'}`}>
                         Private Flights
