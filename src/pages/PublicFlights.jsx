@@ -9,12 +9,19 @@ const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
 };
 
-// Date formatter
+// Date & Time formatter (For Watch Hours)
 const formatDateTimeStr = (dateStr, timeStr) => {
   if (!dateStr || !timeStr) return '';
   const date = new Date(`${dateStr}T${timeStr}`);
   return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + 
          date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+};
+
+// Date ONLY formatter (For UDF)
+const formatDateOnlyStr = (dateStr) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
 // Number to Words
@@ -29,7 +36,7 @@ const numberToWords = (num) => {
     if (n < 100000) return convert(Math.floor(n / 1000)) + 'THOUSAND ' + (n % 1000 !== 0 ? convert(n % 1000) : '');
     return convert(Math.floor(n / 100000)) + 'LAKH ' + (n % 100000 !== 0 ? convert(n % 100000) : '');
   };
-  return 'RUPEES ' + convert(num).trim() + ' ONLY';
+  return convert(Math.round(num)).trim() + ' rupee';
 };
 
 const ALL_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -69,6 +76,8 @@ export default function PublicFlights() {
   const getMonthHistory = (monthName) => {
     if (!airline) return [];
     let history = [];
+    
+    // Fetch actual saved history
     billingHistory.forEach(invoice => {
       if (invoice.airline === airline) {
         const monthData = invoice.processedMonths.find(m => m.monthName === monthName);
@@ -77,6 +86,38 @@ export default function PublicFlights() {
         }
       }
     });
+
+    // Inject full month of February dummy data
+    if (monthName === 'February') {
+      const isWatch = activeTab === 'watch';
+      const dummyData = Array.from({ length: 28 }, (_, i) => {
+        const dayStr = (i + 1).toString().padStart(2, '0');
+        const watchHrs = 2.5; // Flat hours for dummy data
+        const pax = 145;
+        const rate = isWatch ? 5000 : 200;
+        const amount = isWatch ? watchHrs * rate : pax * rate;
+
+        return {
+          id: `dummy-feb-${i}`,
+          flightName: `6E-${200 + i}`,
+          arrivalDate: `2026-02-${dayStr}`,
+          arrivalTime: '09:00',
+          departureDate: `2026-02-${dayStr}`,
+          departureTime: '11:30',
+          passengers: pax.toString(),
+          watchHours: watchHrs.toString(),
+          passengerCount: pax,
+          rate: rate,
+          amount: amount,
+          invoiceDate: `2026-02-${dayStr}`,
+          type: isWatch ? 'Watch Hour Extension' : 'UDF',
+          arrivalStr: isWatch ? formatDateTimeStr(`2026-02-${dayStr}`, '09:00') : formatDateOnlyStr(`2026-02-${dayStr}`),
+          departureStr: isWatch ? formatDateTimeStr(`2026-02-${dayStr}`, '11:30') : formatDateOnlyStr(`2026-02-${dayStr}`)
+        };
+      });
+      history = [...dummyData, ...history];
+    }
+    
     return history;
   };
 
@@ -151,19 +192,21 @@ export default function PublicFlights() {
           const watchHrs = parseFloat(entry.watchHours);
           if (isNaN(watchHrs) || watchHrs < 0) return alert(`Invalid Watch Hours in ${month} - Record #${i + 1}`);
 
-          // Direct calculation based ONLY on the input field
-          const hourlyRate = 5000;
-          const amount = watchHrs * hourlyRate;
+          // Skip flights with 0 watch hours from the final watch invoice to keep it clean
+          if (watchHrs > 0) {
+            const hourlyRate = 5000;
+            const amount = watchHrs * hourlyRate;
 
-          monthFlights.push({
-            ...entry,
-            arrivalStr: formatDateTimeStr(entry.arrivalDate, entry.arrivalTime),
-            departureStr: formatDateTimeStr(entry.departureDate, entry.departureTime),
-            watchHours: watchHrs,
-            rate: hourlyRate,
-            amount
-          });
-          monthSubTotal += amount;
+            monthFlights.push({
+              ...entry,
+              arrivalStr: formatDateTimeStr(entry.arrivalDate, entry.arrivalTime), // Time Included
+              departureStr: formatDateTimeStr(entry.departureDate, entry.departureTime), // Time Included
+              watchHours: watchHrs,
+              rate: hourlyRate,
+              amount
+            });
+            monthSubTotal += amount;
+          }
 
         } else {
           if (!entry.arrivalDate || !entry.arrivalTime || !entry.departureDate || !entry.departureTime || !entry.passengers) 
@@ -177,8 +220,8 @@ export default function PublicFlights() {
 
           monthFlights.push({
             ...entry,
-            arrivalStr: formatDateTimeStr(entry.arrivalDate, entry.arrivalTime),
-            departureStr: formatDateTimeStr(entry.departureDate, entry.departureTime),
+            arrivalStr: formatDateOnlyStr(entry.arrivalDate), // ONLY DATE
+            departureStr: formatDateOnlyStr(entry.departureDate), // ONLY DATE
             passengerCount,
             rate: passengerRate,
             amount
@@ -187,12 +230,19 @@ export default function PublicFlights() {
         }
       }
 
-      processedMonths.push({
-        monthName: month,
-        flights: monthFlights,
-        monthTotal: monthSubTotal
-      });
-      grandTotalAmount += monthSubTotal;
+      // Only push the month if there are billable flights
+      if (monthFlights.length > 0) {
+        processedMonths.push({
+          monthName: month,
+          flights: monthFlights,
+          monthTotal: monthSubTotal
+        });
+        grandTotalAmount += monthSubTotal;
+      }
+    }
+
+    if (processedMonths.length === 0) {
+      return alert("No billable flights found (e.g., all watch hours were 0). Please check your data.");
     }
 
     const cgst = grandTotalAmount * 0.09;
@@ -213,15 +263,38 @@ export default function PublicFlights() {
     });
   };
 
+  // --- Step 4: Consolidated Invoice Generation ---
+  const handleGenerateConsolidated = (month, historyData) => {
+    const subTotal = historyData.reduce((acc, curr) => acc + curr.amount, 0);
+    const cgst = subTotal * 0.09;
+    const sgst = subTotal * 0.09;
+    const igst = subTotal * 0.18;
+    const total = subTotal + cgst + sgst + igst;
+
+    setInvoiceData({
+      type: activeTab === 'watch' ? 'Watch Hour Extension' : 'UDF',
+      airline,
+      processedMonths: [{
+        monthName: month,
+        flights: historyData,
+        monthTotal: subTotal
+      }],
+      subTotal,
+      cgst,
+      sgst,
+      igst,
+      total,
+      invoiceDate: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    });
+  };
+
   const resetForm = () => {
-    // We intentionally DO NOT reset the airline so they can quickly check other months
     setSelectedMonths([]);
     setMonthRecords({});
     setInvoiceData(null);
   };
 
   const handleSaveDraft = () => {
-    // Save to Mock Database history
     setBillingHistory(prev => [...prev, invoiceData]);
     alert("Invoice saved to drafts & history successfully!");
     resetForm();
@@ -271,7 +344,7 @@ export default function PublicFlights() {
                   <ChevronDown size={18} className={`text-slate-400 transition-transform ${isAirlineOpen ? 'rotate-180' : ''}`} />
                 </div>
                 {isAirlineOpen && (
-                  <div className="absolute top-full left-0 z-50 mt-1 w-full rounded-xl bg-white shadow-xl py-2 flex flex-col border border-slate-100">
+                  <div className="absolute top-full left-0 z-50 mt-1 w-full rounded-xl bg-white shadow-xl py-2 flex flex-col border border-slate-100 overflow-hidden">
                     <div className="max-h-60 overflow-y-auto custom-scrollbar">
                       {AIRLINE_OPTIONS.map((opt, idx) => (
                         <button 
@@ -336,17 +409,30 @@ export default function PublicFlights() {
                         {/* --- HISTORY SECTION --- */}
                         {pastHistory.length > 0 && (
                           <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 mb-8">
-                            <h4 className="flex items-center gap-2 text-emerald-800 font-bold text-sm mb-3">
-                              <History size={16} /> Previously Billed in {month}
-                            </h4>
-                            <div className="space-y-2">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 border-b border-emerald-200/50 pb-4">
+                              <h4 className="flex items-center gap-2 text-emerald-800 font-bold text-sm">
+                                <History size={16} /> Previously Billed in {month}
+                              </h4>
+                              <button 
+                                onClick={() => handleGenerateConsolidated(month, pastHistory)}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg text-xs font-bold transition-all shadow-md shadow-emerald-600/20 active:scale-95"
+                              >
+                                Generate Consolidated Monthly Invoice
+                              </button>
+                            </div>
+                            <div className="space-y-2 max-h-80 overflow-y-auto custom-scrollbar pr-2">
                               {pastHistory.map((hist, hIdx) => (
-                                <div key={hIdx} className="flex justify-between items-center bg-white border border-emerald-100 p-3 rounded-lg text-sm">
+                                <div key={hIdx} className="flex justify-between items-center bg-white border border-emerald-100 p-3 rounded-lg text-sm transition-colors hover:bg-emerald-50/50">
                                   <div>
                                     <span className="font-bold text-slate-800">{hist.flightName}</span>
                                     <span className="text-slate-500 text-xs ml-3">Billed on: {hist.invoiceDate} ({hist.type})</span>
                                   </div>
-                                  <div className="font-bold text-emerald-700">{formatCurrency(hist.amount)}</div>
+                                  <div className="flex items-center gap-4">
+                                    <div className="font-bold text-emerald-700">{formatCurrency(hist.amount)}</div>
+                                    <button className="flex items-center gap-1.5 text-[#3B82F6] hover:text-blue-800 text-xs font-bold bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors border border-blue-100">
+                                      <Download size={14} /> PDF
+                                    </button>
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -418,9 +504,9 @@ export default function PublicFlights() {
                 })}
 
                 {/* Final Master Generate Button */}
-                <div className="flex justify-end pt-4">
+                <div className="flex justify-end pt-4 border-t border-slate-100">
                   <button type="button" onClick={handleGenerate} className="rounded-xl bg-[#3B82F6] px-12 py-4 text-base font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-600 hover:-translate-y-0.5 active:translate-y-0">
-                    Generate Final Invoice
+                    Generate Partial Invoice
                   </button>
                 </div>
               </div>
@@ -438,10 +524,10 @@ export default function PublicFlights() {
             <div className="flex items-center justify-between px-8 py-4 border-b border-slate-200 bg-slate-100 print:hidden">
               <h3 className="text-sm font-bold text-slate-600 uppercase tracking-wider">Invoice Document Preview</h3>
               <div className="flex items-center gap-4">
-                <button className="flex items-center gap-2 bg-white border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50">
+                <button className="flex items-center gap-2 bg-white border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50 rounded-lg">
                   <Download size={14} /> DOWNLOAD PDF
                 </button>
-                <button onClick={() => setInvoiceData(null)} className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-colors" title="Close">
+                <button onClick={() => setInvoiceData(null)} className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-full transition-colors" title="Close">
                   <X size={18} />
                 </button>
               </div>
@@ -480,7 +566,7 @@ export default function PublicFlights() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="font-bold text-slate-600 uppercase text-xs w-32">Invoice No:</span>
-                    <span className="font-bold text-slate-900 text-right">INV-2026-005</span>
+                    <span className="font-bold text-slate-900 text-right">PUB-2026-105</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="font-bold text-slate-600 uppercase text-xs w-32">Date Issued:</span>
@@ -497,11 +583,10 @@ export default function PublicFlights() {
               <div className="mt-8 border border-slate-800 border-b-0">
                 
                 {/* Dynamic Table Header */}
-                <div className="grid grid-cols-[1fr_120px_120px_140px] gap-4 bg-slate-800 text-white p-3 text-[10px] font-bold uppercase tracking-widest">
-                  <div>Description & Flight Details</div>
-                  <div className="text-right">{invoiceData.type === 'Watch Hour Extension' ? 'WATCH HRS' : 'PASSENGERS'}</div>
-                  <div className="text-right">RATE</div>
-                  <div className="text-right">AMOUNT</div>
+                <div className="grid grid-cols-[200px_1fr_120px] gap-4 bg-slate-800 text-white p-3 text-[10px] font-bold uppercase tracking-widest">
+                  <div>Flight Details</div>
+                  <div>Breakdown of Charges</div>
+                  <div className="text-right">Total Amount</div>
                 </div>
 
                 {/* Iterate through Months */}
@@ -515,22 +600,39 @@ export default function PublicFlights() {
 
                     {/* Flights within the month */}
                     {monthGroup.flights.map((entry, idx) => (
-                      <div key={idx} className="grid grid-cols-[1fr_120px_120px_140px] gap-4 p-4 border-b border-slate-300 items-start text-sm bg-white">
-                        <div className="flex flex-col">
+                      <div key={idx} className="grid grid-cols-[200px_1fr_120px] gap-4 p-4 border-b border-slate-300 items-start text-sm bg-white">
+                        
+                        {/* FLIGHT INFO COLUMN */}
+                        <div className="flex flex-col border-r border-slate-100 pr-4">
                           <span className="font-bold text-slate-900">{invoiceData.airline}</span>
-                          <span className="text-xs font-bold text-slate-500 mb-1.5">Flight: {entry.flightName}</span>
-                          
+                          <span className="text-xs font-bold text-slate-500 mb-2">Flight: {entry.flightName}</span>
                           <div className="text-[11px] text-slate-600 space-y-0.5 border-l-2 border-slate-300 pl-2">
                             <p><span className="font-medium text-slate-500">Arr:</span> {entry.arrivalStr}</p>
                             <p><span className="font-medium text-slate-500">Dep:</span> {entry.departureStr}</p>
                           </div>
                         </div>
                         
-                        <div className="text-right font-medium text-slate-900 mt-1">
-                          {invoiceData.type === 'Watch Hour Extension' ? entry.watchHours : entry.passengerCount}
+                        {/* BREAKDOWN COLUMN (The Prominent Middle Section) */}
+                        <div className="flex flex-col px-2">
+                          <div className="flex flex-col space-y-1.5">
+                            {invoiceData.type === 'Watch Hour Extension' ? (
+                              <p className="flex justify-between w-full md:w-3/4 text-[13px] border-b border-slate-50 pb-1">
+                                <span className="text-slate-600">Watch Hr Ext. ({entry.watchHours} Hrs @ ₹{entry.rate})</span> 
+                                <span className="font-bold text-slate-900">{formatCurrency(entry.amount)}</span>
+                              </p>
+                            ) : (
+                              <p className="flex justify-between w-full md:w-3/4 text-[13px] border-b border-slate-50 pb-1">
+                                <span className="text-slate-600">UDF ({entry.passengerCount} Pax @ ₹{entry.rate})</span> 
+                                <span className="font-bold text-slate-900">{formatCurrency(entry.amount)}</span>
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <div className="text-right font-medium text-slate-700 mt-1">{formatCurrency(entry.rate)}</div>
-                        <div className="text-right font-bold text-slate-900 mt-1">{formatCurrency(entry.amount)}</div>
+
+                        {/* ROW TOTAL COLUMN */}
+                        <div className="text-right font-extrabold text-slate-900 mt-1 text-base">
+                          {formatCurrency(entry.amount)}
+                        </div>
                       </div>
                     ))}
                   </React.Fragment>
@@ -547,7 +649,7 @@ export default function PublicFlights() {
                       <span className="text-xs">ADD CGST @9%</span>
                       <span>{formatCurrency(invoiceData.cgst)}</span>
                     </div>
-                    <div className="flex justify-between items-center text-slate-600">
+                    <div className="flex justify-between items-center text-slate-600 pb-2 border-b border-slate-800">
                       <span className="text-xs">ADD SGST @9%</span>
                       <span>{formatCurrency(invoiceData.sgst)}</span>
                     </div>
@@ -595,18 +697,18 @@ export default function PublicFlights() {
                       <span className="text-[10px] text-slate-400 italic font-medium">Digital Signature Authorized</span>
                     )}
                   </div>
-                  <span className="font-bold text-slate-900 text-xs uppercase tracking-widest">Terminal Manager</span>
+                  <span className="font-bold text-slate-900 text-xs uppercase tracking-widest">Airport Director</span>
                   <span className="text-slate-600 text-[10px] uppercase tracking-widest mt-0.5">Bilaspur Airport</span>
                 </div>
               </div>
             </div>
 
             {/* Bottom Form Actions (Not printed) */}
-            <div className="flex items-center justify-end gap-3 px-8 py-5 border-t border-slate-200 bg-slate-100 print:hidden">
+            <div className="flex items-center justify-end px-8 py-5 border-t border-slate-200 bg-slate-100 print:hidden gap-3">
               <button onClick={() => setInvoiceData(null)} className="px-6 py-2.5 text-xs font-bold text-slate-600 transition hover:text-slate-900 uppercase tracking-wide">
                 Discard
               </button>
-              <button onClick={handleSaveDraft} className="bg-[#3B82F6] px-8 py-2.5 text-xs font-bold text-white transition hover:bg-blue-600 shadow-md shadow-blue-500/20 uppercase tracking-wide flex items-center gap-2">
+              <button onClick={handleSaveDraft} className="bg-[#3B82F6] px-8 py-2.5 text-xs font-bold text-white transition hover:bg-blue-600 shadow-md uppercase tracking-wide rounded-lg">
                 Save Draft
               </button>
             </div>
