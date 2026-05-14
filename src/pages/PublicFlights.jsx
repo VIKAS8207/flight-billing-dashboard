@@ -220,10 +220,10 @@ export default function PublicFlights() {
     setInvoiceData(null);
   };
 
-  const handleSaveAndSend = () => {
+  const handleSaveDraft = () => {
     // Save to Mock Database history
     setBillingHistory(prev => [...prev, invoiceData]);
-    alert("Invoice saved to history and sent successfully!");
+    alert("Invoice saved to drafts & history successfully!");
     resetForm();
   };
 
@@ -471,7 +471,7 @@ export default function PublicFlights() {
               {/* Bill To / Info Grid */}
               <div className="grid grid-cols-2 gap-12 py-8 border-b border-slate-300">
                 <div className="space-y-1">
-                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Billed To:</div>
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Primary Billed Entity:</div>
                   <h2 className="text-base font-bold text-slate-900">{invoiceData.airline}</h2>
                   <p className="text-xs text-slate-700">Corporate Head Office</p>
                   <p className="text-xs text-slate-700 pt-2"><span className="text-slate-500 mr-2">GSTIN/UIN:</span> <span className="uppercase">07AAACA1517B1Z1</span></p>
@@ -496,7 +496,7 @@ export default function PublicFlights() {
               {/* Data Table */}
               <div className="mt-8 border border-slate-800 border-b-0">
                 
-                {/* Dynamic Table Header - REMOVED HSN/SAC */}
+                {/* Dynamic Table Header */}
                 <div className="grid grid-cols-[1fr_120px_120px_140px] gap-4 bg-slate-800 text-white p-3 text-[10px] font-bold uppercase tracking-widest">
                   <div>Description & Flight Details</div>
                   <div className="text-right">{invoiceData.type === 'Watch Hour Extension' ? 'WATCH HRS' : 'PASSENGERS'}</div>
@@ -581,7 +581,7 @@ export default function PublicFlights() {
                       <p><span className="text-slate-500 w-16 inline-block">Bank:</span> HDFC BANK</p>
                       <p><span className="text-slate-500 w-16 inline-block">A/C No:</span> 028205501441</p>
                       <p><span className="text-slate-500 w-16 inline-block">IFSC:</span> HDFC0004352</p>
-                      <p><span className="text-slate-500 w-16 inline-block">Branch:</span> Vardhaman Complex, Bilaspur (C.G.)</p>
+                      <p><span className="text-slate-500 w-16 inline-block">Branch:</span> Mungeli Road, Bilaspur (C.G.)</p>
                     </div>
                   </div>
                 </div>
@@ -606,11 +606,8 @@ export default function PublicFlights() {
               <button onClick={() => setInvoiceData(null)} className="px-6 py-2.5 text-xs font-bold text-slate-600 transition hover:text-slate-900 uppercase tracking-wide">
                 Discard
               </button>
-              <button onClick={() => alert("Saved Draft!")} className="border border-slate-800 bg-white px-8 py-2.5 text-xs font-bold text-slate-900 transition hover:bg-slate-50 uppercase tracking-wide">
+              <button onClick={handleSaveDraft} className="bg-[#3B82F6] px-8 py-2.5 text-xs font-bold text-white transition hover:bg-blue-600 shadow-md shadow-blue-500/20 uppercase tracking-wide flex items-center gap-2">
                 Save Draft
-              </button>
-              <button onClick={handleSaveAndSend} className="bg-[#3B82F6] px-8 py-2.5 text-xs font-bold text-white transition hover:bg-blue-600 shadow-md shadow-blue-500/20 uppercase tracking-wide flex items-center gap-2">
-                Save & Send Invoice
               </button>
             </div>
 
