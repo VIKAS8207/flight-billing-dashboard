@@ -1,28 +1,31 @@
-import React, { useState } from 'react';
-import { Search, Filter, Send, FileDown, ChevronDown, ChevronLeft, ChevronRight, Plane, Building } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Search, Filter, Send, FileDown, ChevronDown, ChevronLeft, ChevronRight, Plane, Building, Calendar 
+} from 'lucide-react';
 
 // Utility to format currency
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
 };
 
-// Expanded Mock Data with 'type' added and 'Sent' replaced with 'Awaiting Payment'
+// Expanded Mock Data - Updated to reflect Month-Wise billing consolidation
 const initialInvoices = [
-  { id: 'INV-2026-015', airline: 'Air India', type: 'Public', flightNo: 'AI-101', date: '08 May 2026', amount: 145000, status: 'Saved' },
-  { id: 'INV-2026-014', airline: 'IndiGo Airlines', type: 'Public', flightNo: '6E-555', date: '08 May 2026', amount: 85000, status: 'Awaiting Payment' },
-  { id: 'INV-2026-013', airline: 'Private Charter', type: 'Private', flightNo: 'VT-ZZZ', date: '07 May 2026', amount: 22000, status: 'Paid' },
-  { id: 'INV-2026-012', airline: 'Alliance Air Aviation', type: 'Public', flightNo: '9I-404', date: '07 May 2026', amount: 67000, status: 'Saved' },
-  { id: 'INV-2026-011', airline: 'IndiGo Airlines', type: 'Public', flightNo: '6E-888', date: '06 May 2026', amount: 110000, status: 'Awaiting Payment' },
-  { id: 'INV-2026-010', airline: 'Private Charter', type: 'Private', flightNo: 'VT-LMN', date: '06 May 2026', amount: 35000, status: 'Paid' },
-  { id: 'INV-2026-009', airline: 'Air India', type: 'Public', flightNo: 'AI-211', date: '06 May 2026', amount: 95000, status: 'Saved' },
-  { id: 'INV-2026-008', airline: 'Private Charter', type: 'Private', flightNo: 'VT-ABC', date: '05 May 2026', amount: 41000, status: 'Saved' },
-  { id: 'INV-2026-007', airline: 'IndiGo Airlines', type: 'Public', flightNo: '6E-444', date: '05 May 2026', amount: 105000, status: 'Awaiting Payment' },
-  { id: 'INV-2026-006', airline: 'Alliance Air Aviation', type: 'Public', flightNo: '9I-305', date: '04 May 2026', amount: 52000, status: 'Paid' },
-  { id: 'INV-2026-005', airline: 'Alliance Air Aviation', type: 'Public', flightNo: '9I-201', date: '04 May 2026', amount: 45000, status: 'Saved' },
-  { id: 'INV-2026-004', airline: 'IndiGo Airlines', type: 'Public', flightNo: '6E-782', date: '03 May 2026', amount: 125000, status: 'Awaiting Payment' },
-  { id: 'INV-2026-003', airline: 'Air India', type: 'Public', flightNo: 'AI-404', date: '01 May 2026', amount: 89000, status: 'Paid' },
-  { id: 'INV-2026-002', airline: 'Private Charter', type: 'Private', flightNo: 'VT-XYZ', date: '28 Apr 2026', amount: 32000, status: 'Awaiting Payment' },
-  { id: 'INV-2026-001', airline: 'IndiGo Airlines', type: 'Public', flightNo: '6E-112', date: '25 Apr 2026', amount: 110000, status: 'Paid' },
+  { id: 'PUB-2026-015', airline: 'Air India', category: 'Public', type: 'UDF', billingMonths: 'May 2026', date: '08 May 2026', amount: 145000, status: 'Saved' },
+  { id: 'PUB-2026-014', airline: 'IndiGo Airlines', category: 'Public', type: 'Watch Ext.', billingMonths: 'April, May 2026', date: '08 May 2026', amount: 85000, status: 'Awaiting Payment' },
+  { id: 'NSOP-2026-013', airline: 'Charter Jets Pvt Ltd', category: 'Private', type: 'Royalty', billingMonths: 'May 2026', date: '07 May 2026', amount: 22000, status: 'Paid' },
+  { id: 'PUB-2026-012', airline: 'Alliance Air Aviation', category: 'Public', type: 'Parking', billingMonths: 'April 2026', date: '07 May 2026', amount: 67000, status: 'Saved' },
+  { id: 'PUB-2026-011', airline: 'IndiGo Airlines', category: 'Public', type: 'UDF', billingMonths: 'March 2026', date: '06 May 2026', amount: 110000, status: 'Awaiting Payment' },
+  { id: 'NSOP-2026-010', airline: 'Executive Airways', category: 'Private', type: 'Detail', billingMonths: 'February 2026', date: '06 May 2026', amount: 35000, status: 'Paid' },
+  { id: 'PUB-2026-009', airline: 'Air India', category: 'Public', type: 'Parking', billingMonths: 'February, March 2026', date: '06 May 2026', amount: 95000, status: 'Saved' },
+  { id: 'NSOP-2026-008', airline: 'Reliance Transport', category: 'Private', type: 'Detail', billingMonths: 'March 2026', date: '05 May 2026', amount: 41000, status: 'Saved' },
+  { id: 'PUB-2026-007', airline: 'IndiGo Airlines', category: 'Public', type: 'Watch Ext.', billingMonths: 'February 2026', date: '05 May 2026', amount: 105000, status: 'Awaiting Payment' },
+  { id: 'PUB-2026-006', airline: 'Alliance Air Aviation', category: 'Public', type: 'UDF', billingMonths: 'January 2026', date: '04 May 2026', amount: 52000, status: 'Paid' },
+  { id: 'PUB-2026-005', airline: 'Alliance Air Aviation', category: 'Public', type: 'Parking', billingMonths: 'January 2026', date: '04 May 2026', amount: 45000, status: 'Saved' },
+  { id: 'PUB-2026-004', airline: 'IndiGo Airlines', category: 'Public', type: 'UDF', billingMonths: 'January 2026', date: '03 May 2026', amount: 125000, status: 'Awaiting Payment' },
+  { id: 'PUB-2026-003', airline: 'Air India', category: 'Public', type: 'Watch Ext.', billingMonths: 'January 2026', date: '01 May 2026', amount: 89000, status: 'Paid' },
+  { id: 'NSOP-2026-002', airline: 'Aureya Aviation Pvt Ltd', category: 'Private', type: 'Royalty', billingMonths: 'January 2026', date: '28 Apr 2026', amount: 32000, status: 'Awaiting Payment' },
+  { id: 'PUB-2026-001', airline: 'IndiGo Airlines', category: 'Public', type: 'Parking', billingMonths: 'December 2025', date: '25 Apr 2026', amount: 110000, status: 'Paid' },
 ];
 
 export default function Payment() {
@@ -33,10 +36,10 @@ export default function Payment() {
   const [filterStatus, setFilterStatus] = useState('All');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  const [filterType, setFilterType] = useState('All');
-  const [isTypeFilterOpen, setIsTypeFilterOpen] = useState(false);
+  const [filterCategory, setFilterCategory] = useState('All'); // 'Public' or 'Private'
+  const [isCategoryFilterOpen, setIsCategoryFilterOpen] = useState(false);
 
-  // New Airline Sub-Filter States
+  // Airline Sub-Filter States
   const [filterAirline, setFilterAirline] = useState('All');
   const [isAirlineFilterOpen, setIsAirlineFilterOpen] = useState(false);
 
@@ -44,21 +47,22 @@ export default function Payment() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
 
-  // Derive available airlines dynamically based on the selected Flight Type
-  const availableAirlines = filterType === 'All' 
+  // Derive available airlines dynamically based on the selected Flight Category
+  const availableAirlines = filterCategory === 'All' 
     ? [] 
-    : [...new Set(invoices.filter(inv => inv.type === filterType).map(inv => inv.airline))].sort();
+    : [...new Set(invoices.filter(inv => inv.category === filterCategory).map(inv => inv.airline))].sort();
 
   // Filter Logic
   const filteredInvoices = invoices.filter(inv => {
+    // Search now properly scans the billing months as well
     const matchesSearch = inv.airline.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           inv.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          inv.flightNo.toLowerCase().includes(searchTerm.toLowerCase());
+                          inv.billingMonths.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'All' || inv.status === filterStatus;
-    const matchesType = filterType === 'All' || inv.type === filterType;
+    const matchesCategory = filterCategory === 'All' || inv.category === filterCategory;
     const matchesAirline = filterAirline === 'All' || inv.airline === filterAirline;
     
-    return matchesSearch && matchesStatus && matchesType && matchesAirline;
+    return matchesSearch && matchesStatus && matchesCategory && matchesAirline;
   });
 
   // Pagination Logic
@@ -72,7 +76,7 @@ export default function Payment() {
   // Action Handlers
   const handleSend = (id) => {
     setInvoices(invoices.map(inv => inv.id === id ? { ...inv, status: 'Awaiting Payment' } : inv));
-    alert(`Invoice ${id} has been sent to the airline!`);
+    alert(`Invoice ${id} has been finalized and sent to the airline!`);
   };
 
   const handleSelectStatus = (status) => {
@@ -81,10 +85,10 @@ export default function Payment() {
     setCurrentPage(1); 
   };
 
-  const handleSelectType = (type) => {
-    setFilterType(type);
-    setFilterAirline('All'); // Reset airline filter when parent type changes
-    setIsTypeFilterOpen(false);
+  const handleSelectCategory = (category) => {
+    setFilterCategory(category);
+    setFilterAirline('All'); // Reset airline filter when parent category changes
+    setIsCategoryFilterOpen(false);
     setCurrentPage(1);
   };
 
@@ -98,7 +102,7 @@ export default function Payment() {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'Saved':
-        return <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 rounded-full">Saved (Draft)</span>;
+        return <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 rounded-full border border-slate-200">Saved (Draft)</span>;
       case 'Awaiting Payment':
         return <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 border border-amber-200/50 rounded-full">Awaiting Payment</span>;
       case 'Paid':
@@ -122,7 +126,7 @@ export default function Payment() {
 
         <div className="relative">
           <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">Payment & Invoices</h2>
-          <p className="text-sm text-slate-600 font-medium mt-1">Track, send, and manage airline billing.</p>
+          <p className="text-sm text-slate-600 font-medium mt-1">Track, send, and manage consolidated monthly airline billing.</p>
         </div>
 
         <div className="relative flex items-center gap-4 w-full sm:w-auto">
@@ -130,7 +134,7 @@ export default function Payment() {
             <Search className="h-4 w-4 text-slate-400" />
             <input 
               type="text" 
-              placeholder="Search invoice..." 
+              placeholder="Search by invoice or month..." 
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               className="w-full bg-transparent px-3 text-[13px] font-medium text-slate-700 placeholder-slate-400 outline-none"
@@ -139,26 +143,26 @@ export default function Payment() {
 
           <div className="flex items-center gap-3">
             
-            {/* 1. Flight Type Filter */}
+            {/* 1. Category (Public/Private) Filter */}
             <div className="relative">
               <button 
-                onClick={() => { setIsTypeFilterOpen(!isTypeFilterOpen); setIsFilterOpen(false); setIsAirlineFilterOpen(false); }}
+                onClick={() => { setIsCategoryFilterOpen(!isCategoryFilterOpen); setIsFilterOpen(false); setIsAirlineFilterOpen(false); }}
                 className="flex items-center gap-2 h-11 px-5 rounded-2xl bg-gradient-to-r from-[#007BFF] to-[#409cff] text-white font-bold shadow-md shadow-[#007BFF]/20 hover:shadow-lg hover:scale-[1.02] transition-all"
               >
                 <Plane size={16} className="opacity-90" />
                 <span className="text-[13px] tracking-wide whitespace-nowrap">
-                  {filterType === 'All' ? 'All Flights' : `${filterType} Flights`}
+                  {filterCategory === 'All' ? 'All Flights' : `${filterCategory} Flights`}
                 </span>
-                <ChevronDown size={16} className={`ml-1 opacity-90 transition-transform duration-300 ${isTypeFilterOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={16} className={`ml-1 opacity-90 transition-transform duration-300 ${isCategoryFilterOpen ? 'rotate-180' : ''}`} />
               </button>
 
-              <div className={`absolute right-0 top-full mt-2 w-48 rounded-2xl bg-white shadow-xl shadow-[#007BFF]/10 py-2 border border-slate-100 overflow-hidden transform origin-top-right transition-all duration-200 z-50 ${isTypeFilterOpen ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}`}>
+              <div className={`absolute right-0 top-full mt-2 w-48 rounded-2xl bg-white shadow-xl shadow-[#007BFF]/10 py-2 border border-slate-100 overflow-hidden transform origin-top-right transition-all duration-200 z-50 ${isCategoryFilterOpen ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}`}>
                 {['All', 'Public', 'Private'].map((opt) => (
                   <button
                     key={opt}
-                    onClick={() => handleSelectType(opt)}
+                    onClick={() => handleSelectCategory(opt)}
                     className={`w-full text-left px-5 py-2.5 text-[13px] font-bold transition-colors ${
-                      filterType === opt 
+                      filterCategory === opt 
                         ? 'bg-[#007BFF]/10 text-[#007BFF]' 
                         : 'text-slate-600 hover:bg-[#007BFF]/5 hover:text-[#007BFF]'
                     }`}
@@ -169,11 +173,11 @@ export default function Payment() {
               </div>
             </div>
 
-            {/* 2. CONDITIONAL Airline Filter (Appears only if Public or Private is selected) */}
-            {filterType !== 'All' && (
+            {/* 2. CONDITIONAL Airline Filter */}
+            {filterCategory !== 'All' && (
               <div className="relative animate-in fade-in slide-in-from-left-2 duration-300">
                 <button 
-                  onClick={() => { setIsAirlineFilterOpen(!isAirlineFilterOpen); setIsTypeFilterOpen(false); setIsFilterOpen(false); }}
+                  onClick={() => { setIsAirlineFilterOpen(!isAirlineFilterOpen); setIsCategoryFilterOpen(false); setIsFilterOpen(false); }}
                   className="flex items-center gap-2 h-11 px-5 rounded-2xl bg-white border border-[#007BFF]/30 text-[#007BFF] font-bold shadow-sm hover:shadow-md hover:bg-blue-50 transition-all"
                 >
                   <Building size={16} className="opacity-90" />
@@ -215,7 +219,7 @@ export default function Payment() {
             {/* 3. Status Filter */}
             <div className="relative">
               <button 
-                onClick={() => { setIsFilterOpen(!isFilterOpen); setIsTypeFilterOpen(false); setIsAirlineFilterOpen(false); }}
+                onClick={() => { setIsFilterOpen(!isFilterOpen); setIsCategoryFilterOpen(false); setIsAirlineFilterOpen(false); }}
                 className="flex items-center gap-2 h-11 px-5 rounded-2xl bg-gradient-to-r from-[#007BFF] to-[#409cff] text-white font-bold shadow-md shadow-[#007BFF]/20 hover:shadow-lg hover:scale-[1.02] transition-all"
               >
                 <Filter size={16} className="opacity-90" />
@@ -248,12 +252,12 @@ export default function Payment() {
       {/* TABLE CONTAINER */}
       <div className="rounded-2xl border border-slate-100 bg-white shadow-xl flex flex-col z-10">
         <div className="w-full overflow-x-auto rounded-t-2xl">
-          <table className="w-full text-left border-collapse min-w-[800px]">
+          <table className="w-full text-left border-collapse min-w-[850px]">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] uppercase tracking-widest text-slate-500">
                 <th className="p-5 font-bold w-16 text-center">S.No</th>
                 <th className="p-5 font-bold">Invoice Number</th>
-                <th className="p-5 font-bold">Airline & Flight</th>
+                <th className="p-5 font-bold">Airline & Details</th>
                 <th className="p-5 font-bold">Date Created</th>
                 <th className="p-5 font-bold">Amount</th>
                 <th className="p-5 font-bold">Status</th>
@@ -277,9 +281,13 @@ export default function Payment() {
                     <td className="p-5">
                       <div className="font-bold text-slate-800 flex items-center gap-2">
                         {inv.airline}
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-sm bg-slate-100 text-slate-500 uppercase tracking-wider">{inv.type}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-sm bg-slate-100 text-slate-500 uppercase tracking-wider border border-slate-200">
+                          {inv.type}
+                        </span>
                       </div>
-                      <div className="text-xs text-slate-500 mt-0.5">Flight: {inv.flightNo}</div>
+                      <div className="text-xs text-[#007BFF] font-semibold mt-1 flex items-center gap-1.5 bg-blue-50 w-max px-2 py-0.5 rounded">
+                         <Calendar size={12} className="opacity-70"/> Billing Period: {inv.billingMonths}
+                      </div>
                     </td>
                     <td className="p-5 font-medium text-slate-600">{inv.date}</td>
                     <td className="p-5 font-bold text-[#007BFF]">{formatCurrency(inv.amount)}</td>
