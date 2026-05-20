@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ChevronDown, Plus, Calendar, X, Download, Trash2, 
-  ReceiptIndianRupee, Plane, FileSignature 
+  ChevronDown, Plus, Calendar, Clock, X, Download, Trash2, CheckCircle2, History,
+  ReceiptIndianRupee, Plane, FileSignature
 } from 'lucide-react';
 
 // Utility to format numbers
@@ -37,9 +37,7 @@ const AIRLINE_OPTIONS = ['Charter Jets Pvt Ltd', 'Executive Airways', 'Reliance 
 // HARDCODED MASTER RATES
 const RATES = {
   LANDING: 5000,
-  DAY_PARKING: 1000,
-  NIGHT_PARKING: 2500,
-  WATCH_HOUR: 100,
+  WATCH_HOUR: 12260,
   UDF: 200
 };
 
@@ -57,7 +55,7 @@ export default function PrivateFlights() {
   // Dynamic Entries State
   const emptyDetailEntry = { 
     id: Date.now(), flightNo: '', arrivalDate: '', departureDate: '', 
-    passengers: '', dayParkingHrs: '', nightParkingHrs: '', watchHourHrs: '' 
+    passengers: '', planeWeight: '', dayParkingOption: '0', nightParkingHrs: '', watchHourHrs: '' 
   };
   const emptyRoyaltyEntry = { 
     id: Date.now(), flightNo: '', arrivalDate: '', departureDate: '', 
@@ -120,21 +118,43 @@ export default function PrivateFlights() {
       for (let i = 0; i < detailRecords.length; i++) {
         const entry = detailRecords[i];
 
-        if (!entry.flightNo || !entry.arrivalDate || !entry.departureDate || !entry.passengers) 
-          return alert(`Please complete Flight No, Dates, and Passengers for Record #${i + 1}`);
+        if (!entry.flightNo || !entry.arrivalDate || !entry.departureDate || !entry.passengers || !entry.planeWeight) 
+          return alert(`Please complete Flight No, Dates, Passengers, and Weight for Record #${i + 1}`);
 
         const passengerCount = parseInt(entry.passengers, 10);
         if (isNaN(passengerCount) || passengerCount < 0) return alert(`Invalid passenger count in Record #${i + 1}`);
+
+        const weight = parseFloat(entry.planeWeight) || 0;
+        if (weight <= 0) return alert(`Please enter a valid Plane Weight for Record #${i + 1}`);
         
-        const dayHrs = parseFloat(entry.dayParkingHrs) || 0;
+        // Parking Option Parsers
+        const dayOption = parseInt(entry.dayParkingOption) || 0;
         const nightHrs = parseFloat(entry.nightParkingHrs) || 0;
         const watchHrs = parseFloat(entry.watchHourHrs) || 0;
 
+        // --- MATH CALCULATIONS ---
+        
+        // 1. Day Parking Logic
+        let dayParkingAmt = 0;
+        if (dayOption === 2) {
+          dayParkingAmt = weight <= 40 ? (weight * 2.10) : ((weight * 4.00) + 84);
+        } else if (dayOption === 4) {
+          dayParkingAmt = weight <= 40 ? (weight * 4.20) : ((weight * 7.90) + 168);
+        }
+
+        // 2. Night Parking Logic
+        let nightAmt = 0;
+        if (nightHrs > 0) {
+          const nightRatePerHour = weight <= 40 ? (weight * 1.10) : ((weight * 2.00) + 44);
+          nightAmt = nightRatePerHour * nightHrs;
+        }
+
+        // 3. Watch Hour Extension Logic
+        const watchAmt = watchHrs * RATES.WATCH_HOUR;
+        
+        // 4. UDF & Landing Logic
         const udfAmt = passengerCount * RATES.UDF;
         const landingAmt = RATES.LANDING;
-        const dayParkingAmt = dayHrs * RATES.DAY_PARKING;
-        const nightAmt = nightHrs * RATES.NIGHT_PARKING;
-        const watchAmt = watchHrs * RATES.WATCH_HOUR;
 
         const rowTaxable = landingAmt + dayParkingAmt + nightAmt + watchAmt + udfAmt;
         const rowCgst = rowTaxable * 0.09;
@@ -144,7 +164,8 @@ export default function PrivateFlights() {
           ...entry,
           arrivalStr: formatDateStr(entry.arrivalDate),
           departureStr: formatDateStr(entry.departureDate),
-          passengerCount, dayHrs, nightHrs, watchHrs,
+          passengerCount, planeWeight: weight,
+          dayOption, nightHrs, watchHrs,
           landingAmt, dayParkingAmt, nightAmt, watchAmt, udfAmt,
           rowTaxable, rowCgst, rowSgst, rowTotal: rowTaxable + rowCgst + rowSgst
         });
@@ -326,14 +347,22 @@ export default function PrivateFlights() {
 
                     {activeTab === 'detail' ? (
                       <>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-t border-slate-100 pt-4 mt-2">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 border-t border-slate-100 pt-4 mt-2">
                           <div>
                             <label className="mb-1.5 block text-xs font-bold text-slate-700">Passengers <span className="text-red-500">*</span></label>
                             <input value={entry.passengers} onChange={(e) => updateEntry(entry.id, 'passengers', e.target.value)} type="number" placeholder="e.g. 5" className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" />
                           </div>
                           <div>
-                            <label className="mb-1.5 block text-xs font-bold text-slate-700">Day Park (Hrs)</label>
-                            <input value={entry.dayParkingHrs} onChange={(e) => updateEntry(entry.id, 'dayParkingHrs', e.target.value)} type="number" step="0.5" placeholder="e.g. 2.5" className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" />
+                            <label className="mb-1.5 block text-xs font-bold text-slate-700">Weight (MT) <span className="text-red-500">*</span></label>
+                            <input value={entry.planeWeight} onChange={(e) => updateEntry(entry.id, 'planeWeight', e.target.value)} type="number" step="0.1" placeholder="e.g. 45.5" className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" />
+                          </div>
+                          <div>
+                            <label className="mb-1.5 block text-xs font-bold text-slate-700">Day Park</label>
+                            <select value={entry.dayParkingOption} onChange={(e) => updateEntry(entry.id, 'dayParkingOption', e.target.value)} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none">
+                              <option value="0">0 Hrs</option>
+                              <option value="2">2 Hrs</option>
+                              <option value="4">4 Hrs</option>
+                            </select>
                           </div>
                           <div>
                             <label className="mb-1.5 block text-xs font-bold text-slate-700">Night Park (Hrs)</label>
@@ -341,7 +370,7 @@ export default function PrivateFlights() {
                           </div>
                           <div>
                             <label className="mb-1.5 block text-xs font-bold text-slate-700">Watch Ext (Hrs)</label>
-                            <input value={entry.watchHourExtension} onChange={(e) => updateEntry(entry.id, 'watchHourExtension', e.target.value)} type="number" step="0.5" placeholder="e.g. 1.5" className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" />
+                            <input value={entry.watchHourHrs} onChange={(e) => updateEntry(entry.id, 'watchHourHrs', e.target.value)} type="number" step="0.5" placeholder="e.g. 1.5" className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-[#3B82F6] focus:outline-none" />
                           </div>
                         </div>
                       </>
@@ -386,10 +415,10 @@ export default function PrivateFlights() {
             <div className="flex items-center justify-between px-8 py-4 border-b border-slate-200 bg-slate-100 print:hidden">
               <h3 className="text-sm font-bold text-slate-600 uppercase tracking-wider">Invoice Document Preview</h3>
               <div className="flex items-center gap-4">
-                <button className="flex items-center gap-2 bg-white border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50">
+                <button className="flex items-center gap-2 bg-white border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50 rounded-lg">
                   <Download size={14} /> DOWNLOAD PDF
                 </button>
-                <button onClick={() => setInvoiceData(null)} className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition-colors" title="Close">
+                <button onClick={() => setInvoiceData(null)} className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-full transition-colors" title="Close">
                   <X size={18} />
                 </button>
               </div>
@@ -445,7 +474,7 @@ export default function PrivateFlights() {
               {/* Data Table */}
               <div className="mt-8 border border-slate-800 border-b-0">
                 
-                {/* Dynamic Table Header */}
+                {/* Dynamic Table Header - REMOVED HSN/SAC */}
                 <div className="grid grid-cols-[200px_1fr_120px] gap-4 bg-slate-800 text-white p-3 text-[10px] font-bold uppercase tracking-widest">
                   <div>Flight Details</div>
                   <div>Breakdown of Charges</div>
@@ -472,31 +501,31 @@ export default function PrivateFlights() {
                         {invoiceData.type === 'Detail' ? (
                           <div className="flex flex-col space-y-1.5">
                             {entry.landingAmt > 0 && (
-                              <p className="flex justify-between w-full md:w-3/4 text-[13px] border-b border-slate-50 pb-1">
+                              <p className="flex justify-between w-full md:w-5/6 text-[13px] border-b border-slate-50 pb-1">
                                 <span className="text-slate-600 font-medium">Fixed Landing Charge</span> 
                                 <span className="font-bold text-slate-900">{formatCurrency(entry.landingAmt)}</span>
                               </p>
                             )}
-                            {entry.dayHrs > 0 && (
-                              <p className="flex justify-between w-full md:w-3/4 text-[13px] border-b border-slate-50 pb-1">
-                                <span className="text-slate-600">Day Parking ({entry.dayHrs} Hrs @ ₹{RATES.DAY_PARKING})</span> 
-                                <span className="font-bold text-slate-900">{formatCurrency(entry.dayParkingAmt)}</span>
+                            {entry.dayAmt > 0 && (
+                              <p className="flex justify-between w-full md:w-5/6 text-[13px] border-b border-slate-50 pb-1">
+                                <span className="text-slate-600">Day Parking ({entry.dayOption} Hrs | {entry.planeWeight} MT)</span> 
+                                <span className="font-bold text-slate-900">{formatCurrency(entry.dayAmt)}</span>
                               </p>
                             )}
-                            {entry.nightHrs > 0 && (
-                              <p className="flex justify-between w-full md:w-3/4 text-[13px] border-b border-slate-50 pb-1">
-                                <span className="text-slate-600">Night Parking ({entry.nightHrs} Hrs @ ₹{RATES.NIGHT_PARKING})</span> 
+                            {entry.nightAmt > 0 && (
+                              <p className="flex justify-between w-full md:w-5/6 text-[13px] border-b border-slate-50 pb-1">
+                                <span className="text-slate-600">Night Parking ({entry.nightHrs} Hrs | {entry.planeWeight} MT)</span> 
                                 <span className="font-bold text-slate-900">{formatCurrency(entry.nightAmt)}</span>
                               </p>
                             )}
-                            {entry.watchHourExtension > 0 && (
-                              <p className="flex justify-between w-full md:w-3/4 text-[13px] border-b border-slate-50 pb-1">
-                                <span className="text-slate-600">Watch Hr Ext. ({entry.watchHourExtension} Hrs @ ₹{RATES.WATCH_HOUR})</span> 
+                            {entry.watchAmt > 0 && (
+                              <p className="flex justify-between w-full md:w-5/6 text-[13px] border-b border-slate-50 pb-1">
+                                <span className="text-slate-600">Watch Hr Ext. ({entry.watchHrs} Hrs @ ₹12,260)</span> 
                                 <span className="font-bold text-slate-900">{formatCurrency(entry.watchAmt)}</span>
                               </p>
                             )}
                             {entry.udfAmt > 0 && (
-                              <p className="flex justify-between w-full md:w-3/4 text-[13px] border-b border-slate-50 pb-1">
+                              <p className="flex justify-between w-full md:w-5/6 text-[13px] border-b border-slate-50 pb-1">
                                 <span className="text-slate-600">UDF ({entry.passengerCount} Pax @ ₹{RATES.UDF})</span> 
                                 <span className="font-bold text-slate-900">{formatCurrency(entry.udfAmt)}</span>
                               </p>
@@ -504,11 +533,11 @@ export default function PrivateFlights() {
                           </div>
                         ) : (
                           <div className="flex flex-col space-y-1.5">
-                            <p className="flex justify-between w-full md:w-3/4 text-[13px] border-b border-slate-50 pb-1">
+                            <p className="flex justify-between w-full md:w-5/6 text-[13px] border-b border-slate-50 pb-1">
                               <span className="text-slate-600 font-medium">Base Transaction Amount</span> 
                               <span className="font-bold text-slate-900">{formatCurrency(entry.baseAmount)}</span>
                             </p>
-                            <p className="flex justify-between w-full md:w-3/4 text-[13px] border-b border-slate-50 pb-1">
+                            <p className="flex justify-between w-full md:w-5/6 text-[13px] border-b border-slate-50 pb-1">
                               <span className="text-slate-600">Royalty Applied Rate</span> 
                               <span className="font-bold text-slate-900">{entry.royaltyRate}%</span>
                             </p>
@@ -595,8 +624,11 @@ export default function PrivateFlights() {
             </div>
 
             {/* Bottom Form Actions (Not printed) */}
-            <div className="flex items-center justify-end px-8 py-5 border-t border-slate-200 bg-slate-100 print:hidden">
-              <button onClick={() => alert("Saved Draft!")} className="bg-slate-800 px-8 py-2.5 text-xs font-bold text-white transition hover:bg-slate-900 rounded-lg uppercase tracking-wide">
+            <div className="flex items-center justify-end px-8 py-5 border-t border-slate-200 bg-slate-100 print:hidden gap-3">
+              <button onClick={() => setInvoiceData(null)} className="px-6 py-2.5 text-xs font-bold text-slate-600 transition hover:text-slate-900 uppercase tracking-wide">
+                Discard
+              </button>
+              <button onClick={() => { alert("Saved Draft!"); resetForm(); }} className="bg-slate-800 px-8 py-2.5 text-xs font-bold text-white transition hover:bg-slate-900 shadow-md uppercase tracking-wide rounded-lg">
                 Save Draft
               </button>
             </div>

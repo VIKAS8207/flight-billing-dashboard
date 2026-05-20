@@ -56,7 +56,6 @@ export default function ChargesMaster() {
   // Master Configuration Array for rendering cards cleanly
   const masterConfigs = [
     { key: 'landing', title: 'Landing Charges', sub: 'Base landing fee', icon: PlaneLanding, color: 'text-indigo-500', bg: 'bg-indigo-50', isPercent: false },
-    { key: 'parking', title: 'Watch Hour Extension', sub: 'Standard parking rate', icon: Clock, color: 'text-[#007BFF]', bg: 'bg-blue-50', isPercent: false },
     { key: 'dayParking', title: 'Day Parking Charges', sub: 'Daytime block rate', icon: Sun, color: 'text-amber-500', bg: 'bg-amber-50', isPercent: false },
     { key: 'nightParking', title: 'Night Parking Charges', sub: 'Overnight block rate', icon: Moon, color: 'text-slate-700', bg: 'bg-slate-100', isPercent: false },
     { key: 'watch', title: 'Watch Hour Extension', sub: 'Per hour extension', icon: Timer, color: 'text-rose-500', bg: 'bg-rose-50', isPercent: false },
